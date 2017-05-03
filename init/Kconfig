@@ -1927,6 +1927,14 @@ config COMPAT_BRK
 
 	  On non-ancient distros (post-2000 ones) N is usually a safe choice.
 
+config SLAB_HARDENED
+	default y
+	depends on SLUB
+	bool "Hardened SLAB infrastructure"
+	help
+          Make minor performance sacrifices to harden the kernel slab
+          allocator.
+
 config SYSTEM_DATA_VERIFICATION
 	def_bool n
 	select SYSTEM_TRUSTED_KEYRING
