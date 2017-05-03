@@ -581,6 +581,35 @@ static inline unsigned int get_info_end(struct kmem_cache *s)
 		return s->inuse;
 }
 
+#ifdef CONFIG_SLAB_CANARY
+static inline unsigned long *get_canary(struct kmem_cache *s, void *object)
+{
+	if (s->offset)
+		return object + s->offset + sizeof(void *);
+	return object + s->inuse;
+}
+
+static inline unsigned long get_canary_value(const void *canary, unsigned long value)
+{
+	return (value ^ (unsigned long)canary) & CANARY_MASK;
+}
+
+static inline void set_canary(struct kmem_cache *s, void *object, unsigned long value)
+{
+	unsigned long *canary = get_canary(s, object);
+	*canary = get_canary_value(canary, value);
+}
+
+static inline void check_canary(struct kmem_cache *s, void *object, unsigned long value)
+{
+	unsigned long *canary = get_canary(s, object);
+	BUG_ON(*canary != get_canary_value(canary, value));
+}
+#else
+#define set_canary(s, object, value)
+#define check_canary(s, object, value)
+#endif
+
 /* Loop over all objects in a slab */
 #define for_each_object(__p, __s, __addr, __objects) \
 	for (__p = fixup_red_left(__s, __addr); \
@@ -941,6 +970,10 @@ static struct track *get_track(struct kmem_cache *s, void *object,
 
 	p = object + get_info_end(s);
 
+	if (IS_ENABLED(CONFIG_SLAB_CANARY))
+		p = (void *)p + sizeof(void *);
+
+
 	return kasan_reset_tag(p + alloc);
 }
 
@@ -1092,6 +1125,9 @@ static void print_trailer(struct kmem_cache *s, struct slab *slab, u8 *p)
 			s->inuse - s->object_size);
 
 	off = get_info_end(s);
+
+	if (IS_ENABLED(CONFIG_SLAB_CANARY))
+		off += sizeof(void *);
 
 	if (s->flags & SLAB_STORE_USER)
 		off += 2 * sizeof(struct track);
@@ -1273,6 +1309,9 @@ skip_bug_print:
 static int check_pad_bytes(struct kmem_cache *s, struct slab *slab, u8 *p)
 {
 	unsigned long off = get_info_end(s);	/* The end of info */
+
+	if (IS_ENABLED(CONFIG_SLAB_CANARY))
+		off += sizeof(void *);
 
 	if (s->flags & SLAB_STORE_USER) {
 		/* We also have user information there */
@@ -4278,7 +4317,9 @@ void *__do_kmalloc_node(size_t size, kmem_buckets *b, gfp_t flags, int node,
 	if (unlikely(!size))
 		return ZERO_SIZE_PTR;
 
-	s = kmalloc_slab(size, b, flags, caller);
+==== BASE ====
+	slab_post_alloc_hook(s, gfpflags, 1, &object);
+==== BASE ====
 
 	ret = slab_alloc_node(s, NULL, flags, node, caller, size);
 	ret = kasan_kmalloc(s, ret, size, flags);
@@ -4533,16 +4574,22 @@ static __always_inline void do_slab_free(struct kmem_cache *s,
 	void *tail_obj = tail ? : head;
 	struct kmem_cache_cpu *c;
 	unsigned long tid;
-	void **freelist;
+==== BASE ====
+==== BASE ====
 
-	if (has_sanitize(s)) {
-		int offset = s->offset ? 0 : sizeof(void *);
+	if (IS_ENABLED(CONFIG_SLAB_CANARY) || sanitize) {
+		__maybe_unused int offset = s->offset ? 0 : sizeof(void *);
 		void *x = head;
 
 		while (1) {
-			memset(x + offset, 0, s->object_size - offset);
-			if (!IS_ENABLED(CONFIG_SLAB_SANITIZE_VERIFY) && s->ctor)
-				s->ctor(x);
+			check_canary(s, x, s->random_active);
+			set_canary(s, x, s->random_inactive);
+
+			if (sanitize) {
+				memset(x + offset, 0, s->object_size - offset);
+				if (!IS_ENABLED(CONFIG_SLAB_SANITIZE_VERIFY) && s->ctor)
+					s->ctor(x);
+			}
 			if (x == tail_obj)
 				break;
 			x = get_freepointer(s, x);
@@ -4891,8 +4938,9 @@ int __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags, size_t size,
 			    void **p)
 {
 	struct kmem_cache_cpu *c;
-	unsigned long irqflags;
+==== BASE ====
 	int i;
+==== BASE ====
 
 	/*
 	 * Drain objects in the per cpu slab, while disabling local
@@ -4978,6 +5026,10 @@ static int __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags,
 		maybe_wipe_obj_freeptr(s, p[i]);
 	}
 
+==== BASE ====
+	/* memcg and kmem_cache debug support */
+	slab_post_alloc_hook(s, flags, size, p);
+==== BASE ====
 	return i;
 
 error:
@@ -5220,10 +5272,10 @@ static void early_kmem_cache_node_alloc(int node)
 #ifdef CONFIG_SLUB_DEBUG
 	init_object(kmem_cache_node, n, SLUB_RED_ACTIVE);
 #endif
-	n = kasan_slab_alloc(kmem_cache_node, n, GFP_KERNEL, false);
-	slab->freelist = get_freepointer(kmem_cache_node, n);
-	slab->inuse = 1;
-	kmem_cache_node->node[node] = n;
+==== BASE ====
+	kasan_kmalloc(kmem_cache_node, n, sizeof(struct kmem_cache_node),
+		      GFP_KERNEL);
+==== BASE ====
 	init_kmem_cache_node(n);
 	inc_slabs_node(kmem_cache_node, node, slab->objects);
 
@@ -5389,6 +5441,9 @@ static int calculate_sizes(struct kmem_cache_args *args, struct kmem_cache *s)
 		 */
 		s->offset = ALIGN_DOWN(s->object_size / 2, sizeof(void *));
 	}
+
+	if (IS_ENABLED(CONFIG_SLAB_CANARY))
+		size += sizeof(void *);
 
 #ifdef CONFIG_SLUB_DEBUG
 	if (flags & SLAB_STORE_USER) {
@@ -5676,6 +5731,8 @@ void __check_heap_object(const void *ptr, unsigned long n,
 				       s->name, to_user, offset, n);
 		offset -= s->red_left_pad;
 	}
+
+	check_canary(s, (void *)ptr - offset, s->random_active);
 
 	/* Allow address range falling entirely within usercopy region. */
 	if (offset >= s->useroffset &&
@@ -6023,6 +6080,11 @@ int do_kmem_cache_create(struct kmem_cache *s, const char *name,
 #ifdef CONFIG_SLAB_FREELIST_HARDENED
 	s->random = get_random_long();
 #endif
+#ifdef CONFIG_SLAB_CANARY
+       s->random_active = get_random_long();
+       s->random_inactive = get_random_long();
+#endif
+
 	s->align = args->align;
 	s->ctor = args->ctor;
 #ifdef CONFIG_HARDENED_USERCOPY
