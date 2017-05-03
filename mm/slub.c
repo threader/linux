@@ -236,6 +236,11 @@ static inline bool slub_debug_orig_size(struct kmem_cache *s)
 			(s->flags & SLAB_KMALLOC));
 }
 
+static inline bool has_sanitize(struct kmem_cache *s)
+{
+	return IS_ENABLED(CONFIG_SLAB_SANITIZE) && !(s->flags & (SLAB_TYPESAFE_BY_RCU | SLAB_POISON));
+}
+
 void *fixup_red_left(struct kmem_cache *s, void *p)
 {
 	if (kmem_cache_debug_flags(s, SLAB_RED_ZONE))
@@ -4510,9 +4515,24 @@ static __always_inline void do_slab_free(struct kmem_cache *s,
 				struct slab *slab, void *head, void *tail,
 				int cnt, unsigned long addr)
 {
+	void *tail_obj = tail ? : head;
 	struct kmem_cache_cpu *c;
 	unsigned long tid;
 	void **freelist;
+
+	if (has_sanitize(s)) {
+		int offset = s->offset ? 0 : sizeof(void *);
+		void *x = head;
+
+		while (1) {
+			memset(x + offset, 0, s->object_size - offset);
+			if (s->ctor)
+				s->ctor(x);
+			if (x == tail_obj)
+				break;
+			x = get_freepointer(s, x);
+		}
+	}
 
 redo:
 	/*
