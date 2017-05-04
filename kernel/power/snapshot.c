@@ -1197,6 +1197,7 @@ static void clear_or_poison_free_page(struct page *page)
 
 void clear_or_poison_free_pages(void)
 {
+#if defined(CONFIG_PAGE_SANITIZE)
 	struct memory_bitmap *bm = free_pages_map;
 	unsigned long pfn;
 
@@ -1215,6 +1216,7 @@ void clear_or_poison_free_pages(void)
 		memory_bm_position_reset(bm);
 		pr_info("free pages cleared after restore\n");
 	}
+#endif  /* PAGE_POISONING_ZERO */
 }
 
 /**
