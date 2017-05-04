@@ -579,6 +579,13 @@ static inline void folio_fill_tail(struct folio *folio, size_t offset,
 	kunmap_local(to);
 }
 
+static inline void verify_zero_highpage(struct page *page)
+{
+	void *kaddr = kmap_atomic(page);
+	BUG_ON(memchr_inv(kaddr, 0, PAGE_SIZE));
+	kunmap_atomic(kaddr);
+}
+
 /**
  * memcpy_from_file_folio - Copy some bytes from a file folio.
  * @to: The destination buffer.
