@@ -90,15 +90,42 @@ EXPORT_SYMBOL_GPL(sysctl_long_vals);
 
 #if defined(CONFIG_SYSCTL)
 
-/* Constants used for minimum and maximum */
-
-#ifdef CONFIG_PERF_EVENTS
-static const int six_hundred_forty_kb = 640 * 1024;
+/* Constants used for minimum and  maximum */
+#ifdef CONFIG_LOCKUP_DETECTOR
+static int sixty = 60;
 #endif
 
+static int __maybe_unused neg_one __read_only = -1;
 
-static const int ngroups_max = NGROUPS_MAX;
+static int zero;
+static int __maybe_unused one __read_only = 1;
+static int __maybe_unused two __read_only = 2;
+static int __maybe_unused four __read_only = 4;
+static unsigned long one_ul __read_only = 1;
+static int one_hundred __read_only = 100;
+static int one_thousand __read_only = 1000;
+#ifdef CONFIG_PRINTK
+static int ten_thousand __read_only = 10000;
+#endif
+#ifdef CONFIG_PERF_EVENTS
+static int six_hundred_forty_kb __read_only = 640 * 1024;
+#endif
+
+/* this is needed for the proc_doulongvec_minmax of vm_dirty_bytes */
+static unsigned long dirty_bytes_min __read_only = 2 * PAGE_SIZE;
+
+/* this is needed for the proc_dointvec_minmax for [fs_]overflow UID and GID */
+static int maxolduid __read_only = 65535;
+static int minolduid __read_only;
+
+static int ngroups_max __read_only = NGROUPS_MAX;
 static const int cap_last_cap = CAP_LAST_CAP;
+
+/*this is needed for proc_doulongvec_minmax of sysctl_hung_task_timeout_secs */
+#ifdef CONFIG_DETECT_HUNG_TASK
+// bad practiec to reference HZ direcrtly, and ths must have moved
+//static unsigned long hung_task_timeout_max __read_only = (LONG_MAX/HZ);
+#endif
 
 #ifdef CONFIG_PROC_SYSCTL
 
