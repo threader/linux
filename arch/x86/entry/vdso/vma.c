@@ -277,6 +277,15 @@ up_fail:
 	return ret;
 }
 
+#ifdef CONFIG_X86_64
+static int map_vdso_randomized(const struct vdso_image *image)
+{
+	unsigned long addr = vdso_addr(current->mm->start_stack, image->size-image->sym_vvar_start);
+
+	return map_vdso(image, addr);
+}
+#endif
+
 int map_vdso_once(const struct vdso_image *image, unsigned long addr)
 {
 	struct mm_struct *mm = current->mm;
