@@ -357,6 +357,9 @@ void *alloc_pages_exact_noprof(size_t size, gfp_t gfp_mask) __alloc_size(1);
 #define alloc_pages_exact(...)			alloc_hooks(alloc_pages_exact_noprof(__VA_ARGS__))
 
 void free_pages_exact(void *virt, size_t size);
+==== BASE ====
+void * __meminit alloc_pages_exact_nid(int nid, size_t size, gfp_t gfp_mask);
+==== BASE ====
 
 __meminit void *alloc_pages_exact_nid_noprof(int nid, size_t size, gfp_t gfp_mask) __alloc_size(2);
 #define alloc_pages_exact_nid(...)					\
