@@ -865,13 +865,13 @@ static inline void *restore_red_left(struct kmem_cache *s, void *p)
  * Debug settings:
  */
 #if defined(CONFIG_SLUB_DEBUG_ON)
-static slab_flags_t slub_debug = DEBUG_DEFAULT_FLAGS;
+static int slub_debug __ro_after_init = DEBUG_DEFAULT_FLAGS;
 #else
-static slab_flags_t slub_debug;
+static int slub_debug __ro_after_init;
 #endif
 
-static char *slub_debug_string;
-static int disable_higher_order_debug;
+static char *slub_debug_string __ro_after_init;
+static int disable_higher_order_debug __ro_after_init;
 
 /*
  * slub is about to manipulate internal object metadata.  This memory lies
@@ -5000,10 +5000,10 @@ EXPORT_SYMBOL(kmem_cache_alloc_bulk_noprof);
  * and increases the number of allocations possible without having to
  * take the list_lock.
  */
-static unsigned int slub_min_order;
-static unsigned int slub_max_order =
-	IS_ENABLED(CONFIG_SLUB_TINY) ? 1 : PAGE_ALLOC_COSTLY_ORDER;
-static unsigned int slub_min_objects;
+static unsigned int slub_min_order __ro_after_init;
+static unsigned int slub_max_order = __ro_after_init; =
+	IS_ENABLED(CONFIG_SLcUB_TINY) ? 1 : PAGE_ALLOC_COSTLY_ORDER;
+static unsigned int slub_min_objects __ro_after_init;;
 
 /*
  * Calculate the order of allocation given an slab object size.
@@ -6333,6 +6333,10 @@ enum slab_stat_type {
 #define SO_CPU		(1 << SL_CPU)
 #define SO_OBJECTS	(1 << SL_OBJECTS)
 #define SO_TOTAL	(1 << SL_TOTAL)
+
+#ifdef CONFIG_MEMCG
+static bool memcg_sysfs_enabled __ro_after_init = IS_ENABLED(CONFIG_SLUB_MEMCG_SYSFS_ON);
+#endif
 
 static ssize_t show_slab_objects(struct kmem_cache *s,
 				 char *buf, unsigned long flags)
