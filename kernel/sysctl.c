@@ -90,6 +90,11 @@ EXPORT_SYMBOL_GPL(sysctl_long_vals);
 
 #if defined(CONFIG_SYSCTL)
 
+#if IS_ENABLED(CONFIG_USB)
+int deny_new_usb __read_mostly = 0;
+EXPORT_SYMBOL(deny_new_usb);
+#endif
+
 #ifdef CONFIG_USER_NS
 extern int unprivileged_userns_clone;
 #endif
@@ -395,6 +400,25 @@ static int proc_get_long(char **buf, size_t *size,
 
 	if (strtoul_lenient(p, &p, 0, val))
 		return -EINVAL;
+
+	len = *size;
+	if (len > TMPBUFLEN - 1)
+		len = TMPBUFLEN - 1;
+
+	memcpy(tmp, *buf, len);
+
+	tmp[len] = 0;
+	p = tmp;
+	if (*p == '-' && *size > 1) {
+		*neg = true;
+		p++;
+	} else
+		*neg = false;
+	if (!isdigit(*p))
+		return -EINVAL;
+
+	*val = simple_strtoul(p, &p, 0);
+==== BASE ====
 
 	len = p - tmp;
 
@@ -1838,7 +1862,18 @@ static struct ctl_table kern_table[] = {
 	{
 		.procname	= "userprocess_debug",
 		.data		= &show_unhandled_signals,
-		.maxlen		= sizeof(int),
+		.maxlen		= size+#if IS_ENABLED(CONFIG_USB)
++       {
++               .procname       = "deny_new_usb",
++               .data           = &deny_new_usb,
++               .maxlen         = sizeof(int),
++               .mode           = 0644,
++               .proc_handler   = proc_dointvec_minmax_sysadmin,
++               .extra1         = &zero,
++               .extra2         = &one,
++       },
++#endif
+of(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec,
 	},
@@ -1866,6 +1901,17 @@ static struct ctl_table kern_table[] = {
 		.mode		= 0644,
 		.proc_handler	= proc_doulongvec_minmax,
 	},
+#if IS_ENABLED(CONFIG_USB)
+       {
+               .procname       = "deny_new_usb",
+               .data           = (void *)&deny_new_usb,
+               .maxlen         = sizeof(int),
+               .mode           = 0644,
+               .proc_handler   = proc_dointvec_minmax_sysadmin,
+               .extra1         = &zero,
+               .extra2         = &one,
+       },
+#endif
 	{
 		.procname	= "ngroups_max",
 		.data		= (void *)&ngroups_max,
