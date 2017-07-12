@@ -54,6 +54,7 @@ static __always_inline void boot_init_stack_canary(void)
 #ifdef CONFIG_X86_64
 	BUILD_BUG_ON(offsetof(struct fixed_percpu_data, stack_canary) != 40);
 #endif
+	canary &= CANARY_MASK;
 
 	current->stack_canary = canary;
 #ifdef CONFIG_X86_64
