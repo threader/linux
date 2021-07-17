@@ -90,18 +90,14 @@ EXPORT_SYMBOL_GPL(sysctl_long_vals);
 
 #if defined(CONFIG_SYSCTL)
 
-<<<<<<< HEAD
-/* Constants used for minimum and maximum */
-=======
 /* External variables not in a header file. */
 #if IS_ENABLED(CONFIG_USB)
 int deny_new_usb __read_mostly = 0;
 EXPORT_SYMBOL(deny_new_usb);
 #endif
->>>>>>> d4a29a89320a (add toggle for disabling newly added USB devices)
 
 #ifdef CONFIG_PERF_EVENTS
-static const int six_hundred_forty_kb = 640 * 1024;
+static const int six_hundred_forty_kb __read_only = 640 * 1024;
 #endif
 
 
@@ -143,6 +139,25 @@ static enum sysctl_writes_mode sysctl_writes_strict = SYSCTL_WRITES_STRICT;
 int sysctl_legacy_va_layout;
 #endif
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_SCHED_DEBUG
+static int min_sched_granularity_ns __read_only = 100000;		/* 100 usecs */
+static int max_sched_granularity_ns __read_only = NSEC_PER_SEC;	/* 1 second */
+static int min_wakeup_granularity_ns __read_only;			/* 0 usecs */
+static int max_wakeup_granularity_ns __read_only = NSEC_PER_SEC;	/* 1 second */
+#ifdef CONFIG_SMP
+static int min_sched_tunable_scaling __read_only = SCHED_TUNABLESCALING_NONE;
+static int max_sched_tunable_scaling __read_only = SCHED_TUNABLESCALING_END-1;
+#endif /* CONFIG_SMP */
+#endif /* CONFIG_SCHED_DEBUG */
+
+#ifdef CONFIG_COMPACTION
+static int min_extfrag_threshold __read_only;
+static int max_extfrag_threshold __read_only = 1000;
+#endif
+
+>>>>>>> 47615581453c (make sysctl constants read-only)
 #endif /* CONFIG_SYSCTL */
 
 /*
