@@ -20,31 +20,31 @@
 #include <net/protocol.h>
 #include <net/netevent.h>
 
-static int tcp_retr1_max = 255;
-static int ip_local_port_range_min[] = { 1, 1 };
-static int ip_local_port_range_max[] = { 65535, 65535 };
-static int tcp_adv_win_scale_min = -31;
-static int tcp_adv_win_scale_max = 31;
-static int tcp_app_win_max = 31;
-static int tcp_min_snd_mss_min = TCP_MIN_SND_MSS;
-static int tcp_min_snd_mss_max = 65535;
-static int ip_privileged_port_min;
-static int ip_privileged_port_max = 65535;
-static int ip_ttl_min = 1;
-static int ip_ttl_max = 255;
-static int tcp_syn_retries_min = 1;
-static int tcp_syn_retries_max = MAX_TCP_SYNCNT;
-static int tcp_syn_linear_timeouts_max = MAX_TCP_SYNCNT;
-static unsigned long ip_ping_group_range_min[] = { 0, 0 };
-static unsigned long ip_ping_group_range_max[] = { GID_T_MAX, GID_T_MAX };
+static int tcp_retr1_max __read_only = 255;
+static int ip_local_port_range_min[] __read_only = { 1, 1 };
+static int ip_local_port_range_max[] __read_only = { 65535, 65535 };
+static int tcp_adv_win_scale_min __read_only = -31;
+static int tcp_adv_win_scale_max __read_only = 31;
+static int tcp_app_win_max __read_only = 31;
+static int tcp_min_snd_mss_min __read_only = TCP_MIN_SND_MSS;
+static int tcp_min_snd_mss_max __read_only = 65535;
+static int ip_privileged_port_min __read_only;
+static int ip_privileged_port_max __read_only = 65535;
+static int ip_ttl_min __read_only = 1;
+static int ip_ttl_max __read_only = 255;
+static int tcp_syn_retries_min __read_only = 1;
+static int tcp_syn_retries_max __read_only = MAX_TCP_SYNCNT;
+static int tcp_syn_linear_timeouts_max __read_only = MAX_TCP_SYNCNT;
+static unsigned long ip_ping_group_range_min[] __read_only = { 0, 0 };
+static unsigned long ip_ping_group_range_max[] __read_only = { GID_T_MAX, GID_T_MAX };
 static u32 u32_max_div_HZ = UINT_MAX / HZ;
-static int one_day_secs = 24 * 3600;
-static u32 fib_multipath_hash_fields_all_mask __maybe_unused =
+static int one_day_secs __read_only = 24 * 3600;
+static u32 fib_multipath_hash_fields_all_mask __maybe_unused __read_only =
 	FIB_MULTIPATH_HASH_FIELD_ALL_MASK;
-static unsigned int tcp_child_ehash_entries_max = 16 * 1024 * 1024;
-static unsigned int udp_child_hash_entries_max = UDP_HTABLE_SIZE_MAX;
-static int tcp_plb_max_rounds = 31;
-static int tcp_plb_max_cong_thresh = 256;
+static unsigned int tcp_child_ehash_entries_max __read_only = 16 * 1024 * 1024;
+static unsigned int udp_child_hash_entries_max __read_only = UDP_HTABLE_SIZE_MAX;
+static int tcp_plb_max_rounds __read_only = 31;
+static int tcp_plb_max_cong_thresh __read_only = 256;
 
 /* obsolete */
 static int sysctl_tcp_low_latency __read_mostly;

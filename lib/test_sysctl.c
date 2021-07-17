@@ -26,9 +26,9 @@
 #include <linux/delay.h>
 #include <linux/vmalloc.h>
 
-static int i_zero;
-static int i_one_hundred = 100;
-static int match_int_ok = 1;
+static int i_zero  __read_only;
+static int i_one_hundred  __read_only = 100;
+static int match_int_ok  __read_only = 1;
 
 
 static struct {
