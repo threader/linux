@@ -9,7 +9,7 @@
 #include <linux/ratelimit.h>
 #include "internal.h"
 
-static const int ten_thousand = 10000;
+static const int ten_thousand __read_only = 10000;
 
 int proc_dointvec_minmax_sysadmin(const struct ctl_table *table, int write,
 				void *buffer, size_t *lenp, loff_t *ppos)
