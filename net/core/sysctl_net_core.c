@@ -29,11 +29,11 @@
 
 #include "dev.h"
 
-static int int_3600 = 3600;
-static int min_sndbuf = SOCK_MIN_SNDBUF;
+static int int_3600 __read_only = 3600;
+static int min_sndbuf __read_only  = SOCK_MIN_SNDBUF;
 static int min_rcvbuf = SOCK_MIN_RCVBUF;
-static int max_skb_frags = MAX_SKB_FRAGS;
-static int min_mem_pcpu_rsv = SK_MEMORY_PCPU_RESERVE;
+static int max_skb_frags __read_only  = MAX_SKB_FRAGS;
+static int min_mem_pcpu_rsv __read_only  = SK_MEMORY_PCPU_RESERVE;
 
 static int net_msg_warn;	/* Unused, but still a sysctl */
 

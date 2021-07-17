@@ -23,12 +23,12 @@
 #endif
 #include <linux/ioam6.h>
 
-static int flowlabel_reflect_max = 0x7;
-static int auto_flowlabels_max = IP6_AUTO_FLOW_LABEL_MAX;
-static u32 rt6_multipath_hash_fields_all_mask =
+static int flowlabel_reflect_max __read_only = 0x7;
+static int auto_flowlabels_max __read_only = IP6_AUTO_FLOW_LABEL_MAX;
+static u32 rt6_multipath_hash_fields_all_mask __read_only =
 	FIB_MULTIPATH_HASH_FIELD_ALL_MASK;
-static u32 ioam6_id_max = IOAM6_DEFAULT_ID;
-static u64 ioam6_id_wide_max = IOAM6_DEFAULT_ID_WIDE;
+static u32 ioam6_id_max __read_only = IOAM6_DEFAULT_ID;
+static u64 ioam6_id_wide_max __read_only = IOAM6_DEFAULT_ID_WIDE;
 
 static int proc_rt6_multipath_hash_policy(const struct ctl_table *table, int write,
 					  void *buffer, size_t *lenp, loff_t *ppos)
