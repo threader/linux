@@ -54,11 +54,11 @@ static int change_page_attr(pte_t *ptep, unsigned long addr, void *data)
 	}
 
 	pte_update(&init_mm, addr, ptep, ~0UL, pte_val(pte), 0);
-
+#ifdef CONFIG_PPC64
 	/* See ptesync comment in radix__set_pte_at() */
 	if (radix_enabled())
 		asm volatile("ptesync": : :"memory");
-
+#endif
 	flush_tlb_kernel_range(addr, addr + PAGE_SIZE);
 
 	spin_unlock(&init_mm.page_table_lock);

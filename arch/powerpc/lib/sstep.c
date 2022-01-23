@@ -1465,7 +1465,7 @@ int analyse_instr(struct instruction_op *op, const struct pt_regs *regs,
 		switch ((word >> 1) & 0x3ff) {
 		case 598:	/* sync */
 			op->type = BARRIER + BARRIER_SYNC;
-#ifdef __powerpc64__
+#ifdef CONFIG_PPC64
 			switch ((word >> 21) & 3) {
 			case 1:		/* lwsync */
 				op->type = BARRIER + BARRIER_LWSYNC;
@@ -3267,9 +3267,11 @@ void emulate_update_regs(struct pt_regs *regs, struct instruction_op *op)
 		case BARRIER_LWSYNC:
 			asm volatile("lwsync" : : : "memory");
 			break;
+#ifdef CONFIG_PPC64
 		case BARRIER_PTESYNC:
 			asm volatile("ptesync" : : : "memory");
 			break;
+#endif
 		}
 		break;
 

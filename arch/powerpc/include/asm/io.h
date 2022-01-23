@@ -334,7 +334,7 @@ static inline void __raw_writel(unsigned int v, volatile void __iomem *addr)
 }
 #define __raw_writel __raw_writel
 
-#ifdef __powerpc64__
+#ifdef CONFIG_PPC64
 static inline unsigned long __raw_readq(const volatile void __iomem *addr)
 {
 	return *(volatile unsigned long __force *)PCI_FIX_ADDR(addr);
@@ -352,7 +352,8 @@ static inline void __raw_writeq_be(unsigned long v, volatile void __iomem *addr)
 	__raw_writeq((__force unsigned long)cpu_to_be64(v), addr);
 }
 #define __raw_writeq_be __raw_writeq_be
-
+#endif
+#ifdef CONFIG_POWER6_CPU
 /*
  * Real mode versions of the above. Those instructions are only supposed
  * to be used in hypervisor real mode as per the architecture spec.
@@ -417,7 +418,7 @@ static inline u64 __raw_rm_readq(volatile void __iomem *paddr)
 			     : "=r" (ret) : "r" (paddr) : "memory");
 	return ret;
 }
-#endif /* __powerpc64__ */
+#endif /* CONFIG_POWER6_CPU */
 
 /*
  *

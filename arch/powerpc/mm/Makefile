@@ -4,6 +4,9 @@
 #
 
 ccflags-$(CONFIG_PPC64)	:= $(NO_MINIMAL_TOC)
+ifeq ($(CONFIG_ALTIVEC),y)
+CFLAGS_mmu_context.o += $(call cc-option, -maltivec, -mabi=altivec)
+endif
 
 obj-y				:= fault.o mem.o pgtable.o mmap.o maccess.o pageattr.o \
 				   init_$(BITS).o pgtable_$(BITS).o \
