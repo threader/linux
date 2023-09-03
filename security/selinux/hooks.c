@@ -228,6 +228,19 @@ static inline u32 cred_sid(const struct cred *cred)
 	return tsec->sid;
 }
 
+static inline u64 cred_tsec_flags(const struct cred *cred)
+{
+	const struct task_security_struct *tsec;
+
+	tsec = selinux_cred(cred);
+	return tsec->flags;
+}
+
+static int get_type_from_sid(u32 sid, u32 *out)
+{
+	return security_sid_to_context_type(&selinux_state, sid, out);
+}
+
 static void __ad_net_init(struct common_audit_data *ad,
 			  struct lsm_network_audit *net,
 			  int ifindex, struct sock *sk, u16 family)
@@ -6337,6 +6350,7 @@ static int selinux_lsm_getattr(unsigned int attr, struct task_struct *p,
 	const struct task_security_struct *tsec;
 	int error;
 	u32 sid;
+	u64 flags;
 	u32 len;
 
 	rcu_read_lock();
@@ -6366,6 +6380,9 @@ static int selinux_lsm_getattr(unsigned int attr, struct task_struct *p,
 	case LSM_ATTR_SOCKCREATE:
 		sid = tsec->sockcreate_sid;
 		break;
+//	Figre this out too...
+//	else if (!strcmp(name, "selinux_flags"))
+//		flags = __tsec->flags;
 	default:
 		error = -EOPNOTSUPP;
 		goto err_unlock;
@@ -6391,9 +6408,10 @@ static int selinux_lsm_setattr(u64 attr, void *value, size_t size)
 {
 	struct task_security_struct *tsec;
 	struct cred *new;
-	u32 mysid = current_sid(), sid = 0, ptsid;
+	u32 mysid = current_sid(), sid = 0, ptsid, context_type = 0;
 	int error;
 	char *str = value;
+	u64 flags;
 
 	/*
 	 * Basic control over ability to set these attributes at all.
@@ -6415,6 +6433,7 @@ static int selinux_lsm_setattr(u64 attr, void *value, size_t size)
 		error = avc_has_perm(mysid, mysid, SECCLASS_PROCESS,
 				     PROCESS__SETSOCKCREATE, NULL);
 		break;
+		/// || !strcmp(name, "selinux_flags")) - figure this out too threader...
 	case LSM_ATTR_CURRENT:
 		error = avc_has_perm(mysid, mysid, SECCLASS_PROCESS,
 				     PROCESS__SETCURRENT, NULL);
@@ -6427,7 +6446,7 @@ static int selinux_lsm_setattr(u64 attr, void *value, size_t size)
 		return error;
 
 	/* Obtain a SID for the context, if one was specified. */
-	if (size && str[0] && str[0] != '\n') {
+	if (size && str[0] && str[0] != '\n' && strcmp(name, "selinux_flags")) {
 		if (str[size-1] == '\n') {
 			str[size-1] = 0;
 			size--;
@@ -6518,6 +6537,37 @@ static int selinux_lsm_setattr(u64 attr, void *value, size_t size)
 		}
 
 		tsec->sid = sid;
+	} else if (!strcmp(name, "selinux_flags")) {
+		error = get_type_from_sid(mysid, &context_type);
+		if (error) {
+			goto abort_change;
+		}
+
+		if (context_type != selinux_state.types.zygote &&
+			context_type != selinux_state.types.webview_zygote
+		) {
+			pr_err("selinux_flags: attempt to set from an unknown context, pid %i\n", current->pid);
+			error = -EPERM;
+			goto abort_change;
+		}
+
+		if (size >= 2 && str[size - 1] == 0) {
+			if (kstrtou64(str, 16, &flags)) {
+				error = -EINVAL;
+				goto abort_change;
+			}
+		} else {
+			error = -EINVAL;
+			goto abort_change;
+		}
+
+		if ((flags & TSEC_ALL_FLAGS) != flags) {
+			pr_warn("selinux_flags: unknown flags %llu\n", flags & ~TSEC_ALL_FLAGS);
+			error = -EINVAL;
+			goto abort_change;
+		}
+
+		tsec->flags = flags;
 	} else {
 		error = -EINVAL;
 		goto abort_change;
