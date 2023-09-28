@@ -2216,11 +2216,22 @@ static int selinux_binder_transfer_file(const struct cred *from,
 			    &ad);
 }
 
+static bool is_crash_dump_sid(u32 sid)
+{
+	u32 type;
+	if (get_type_from_sid(sid, &type)) {
+		return false;
+	}
+	return type == selinux_state.types.crash_dump;
+}
+
 static int selinux_ptrace_access_check(struct task_struct *child,
 				       unsigned int mode)
 {
-	u32 sid = current_sid();
+	const struct cred *cred = current_cred();
+	u32 sid = cred_sid(cred);
 	u32 csid = task_sid_obj(child);
+	int rc;
 
 	if (mode & PTRACE_MODE_READ)
 		return avc_has_perm(sid, csid, SECCLASS_FILE, FILE__READ,
