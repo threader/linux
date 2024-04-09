@@ -410,7 +410,8 @@ static int _dpu_rm_reserve_ctls(
 
 		DPU_DEBUG("ctl %d caps 0x%lX\n", j + CTL_0, features);
 
-		if (rm->has_legacy_ctls &&
+		/* TODO: No need for this */
+		if (/* rm->has_legacy_ctls && */
 		    needs_split_display != has_split_display)
 			continue;
 
