@@ -1852,7 +1852,7 @@ static struct ctl_table kern_table[] = {
 	},
 #if IS_ENABLED(CONFIG_USB)
 	{
-		.procname	= "deny_new_usb",
+		.procname	= "deny_new_usb2",
 		.data		= &deny_new_usb,
 		.maxlen		= sizeof(int),
 		.mode		= 0644,

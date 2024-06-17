@@ -699,6 +699,12 @@ out:
 }
 EXPORT_SYMBOL_GPL(usb_gadget_vbus_disconnect);
 
+<<<<<<< HEAD
+=======
+extern int deny_new_usb;
+
+/* Internal version of usb_gadget_connect needs to be called with connect_lock held. */
+>>>>>>> 27582173ab19 (extend deny_new_usb to USB gadgets)
 static int usb_gadget_connect_locked(struct usb_gadget *gadget)
 	__must_hold(&gadget->udc->connect_lock)
 {
@@ -709,7 +715,17 @@ static int usb_gadget_connect_locked(struct usb_gadget *gadget)
 		goto out;
 	}
 
+<<<<<<< HEAD
 	if (gadget->deactivated || !gadget->udc->allow_connect || !gadget->udc->started) {
+=======
+	if (deny_new_usb) {
+		dev_err(&gadget->dev, "blocked USB gadget connection\n");
+		ret = -EPERM;
+		goto out;
+	}
+
+	if (gadget->deactivated || !gadget->udc->started) {
+>>>>>>> 27582173ab19 (extend deny_new_usb to USB gadgets)
 		/*
 		 * If the gadget isn't usable (because it is deactivated,
 		 * unbound, or not yet started), we only save the new state.
