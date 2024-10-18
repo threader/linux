@@ -356,12 +356,10 @@ extern unsigned long get_zeroed_page_noprof(gfp_t gfp_mask);
 void *alloc_pages_exact_noprof(size_t size, gfp_t gfp_mask) __alloc_size(1);
 #define alloc_pages_exact(...)			alloc_hooks(alloc_pages_exact_noprof(__VA_ARGS__))
 
-void free_pages_exact(void *virt, size_t size);
-==== BASE ====
-void * __meminit alloc_pages_exact_nid(int nid, size_t size, gfp_t gfp_mask);
-==== BASE ====
+void free_pages_exact(void *virt, size_t size);  __alloc_size(1)
 
 __meminit void *alloc_pages_exact_nid_noprof(int nid, size_t size, gfp_t gfp_mask) __alloc_size(2);
+
 #define alloc_pages_exact_nid(...)					\
 	alloc_hooks(alloc_pages_exact_nid_noprof(__VA_ARGS__))
 
