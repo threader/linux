@@ -116,12 +116,6 @@ static int six_hundred_forty_kb __read_only = 640 * 1024;
 static int ngroups_max __read_only = NGROUPS_MAX;
 static const int cap_last_cap = CAP_LAST_CAP;
 
-/*this is needed for proc_doulongvec_minmax of sysctl_hung_task_timeout_secs */
-#ifdef CONFIG_DETECT_HUNG_TASK
-// bad practiec to reference HZ direcrtly, and ths must have moved
-static unsigned long hung_task_timeout_max __read_only = (LONG_MAX/HZ);
-#endif
-
 #ifdef CONFIG_PROC_SYSCTL
 
 /**
