@@ -4317,9 +4317,8 @@ void *__do_kmalloc_node(size_t size, kmem_buckets *b, gfp_t flags, int node,
 	if (unlikely(!size))
 		return ZERO_SIZE_PTR;
 
-==== BASE ====
-	slab_post_alloc_hook(s, gfpflags, 1, &object);
-==== BASE ====
+        s = kmalloc_slab(size, b, flags, caller);
+
 
 	ret = slab_alloc_node(s, NULL, flags, node, caller, size);
 	ret = kasan_kmalloc(s, ret, size, flags);
@@ -4574,8 +4573,6 @@ static __always_inline void do_slab_free(struct kmem_cache *s,
 	void *tail_obj = tail ? : head;
 	struct kmem_cache_cpu *c;
 	unsigned long tid;
-==== BASE ====
-==== BASE ====
 
 	if (IS_ENABLED(CONFIG_SLAB_CANARY) || sanitize) {
 		__maybe_unused int offset = s->offset ? 0 : sizeof(void *);
@@ -4938,9 +4935,7 @@ int __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags, size_t size,
 			    void **p)
 {
 	struct kmem_cache_cpu *c;
-==== BASE ====
-	int i;
-==== BASE ====
+	int i, k;
 
 	/*
 	 * Drain objects in the per cpu slab, while disabling local
@@ -5026,10 +5021,11 @@ static int __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags,
 		maybe_wipe_obj_freeptr(s, p[i]);
 	}
 
-==== BASE ====
-	/* memcg and kmem_cache debug support */
-	slab_post_alloc_hook(s, flags, size, p);
-==== BASE ====
+	for (k = 0; k < i; k++) {
+		check_canary(s, p[k], s->random_inactive);
+		set_canary(s, p[k], s->random_active);
+	}
+
 	return i;
 
 error:
@@ -5272,10 +5268,13 @@ static void early_kmem_cache_node_alloc(int node)
 #ifdef CONFIG_SLUB_DEBUG
 	init_object(kmem_cache_node, n, SLUB_RED_ACTIVE);
 #endif
-==== BASE ====
-	kasan_kmalloc(kmem_cache_node, n, sizeof(struct kmem_cache_node),
-		      GFP_KERNEL);
-==== BASE ====
+       n = kasan_slab_alloc(kmem_cache_node, n, GFP_KERNEL, false);
+       slab->freelist = get_freepointer(kmem_cache_node, n);
+       slab->inuse = 1;
+       kmem_cache_node->node[node] = n;
+
+	set_canary(kmem_cache_node, n, kmem_cache_node->random_active);
+	
 	init_kmem_cache_node(n);
 	inc_slabs_node(kmem_cache_node, node, slab->objects);
 
