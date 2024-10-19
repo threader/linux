@@ -109,7 +109,11 @@ static int zero;
 static int __maybe_unused one __read_only = 1;
 static int __maybe_unused two __read_only = 2;
 static int __maybe_unused four __read_only = 4;
-static unsigned long one_ul __read_only = 1;
+
+static unsigned long __read_only zero_ul;
+static unsigned long __read_only one_ul = 1;
+static unsigned long __read_only long_max = LONG_MAX;
+
 static int one_hundred __read_only = 100;
 static int one_thousand __read_only = 1000;
 #ifdef CONFIG_PRINTK
@@ -132,7 +136,7 @@ static const int cap_last_cap = CAP_LAST_CAP;
 /*this is needed for proc_doulongvec_minmax of sysctl_hung_task_timeout_secs */
 #ifdef CONFIG_DETECT_HUNG_TASK
 // bad practiec to reference HZ direcrtly, and ths must have moved
-//static unsigned long hung_task_timeout_max __read_only = (LONG_MAX/HZ);
+static unsigned long hung_task_timeout_max __read_only = (LONG_MAX/HZ);
 #endif
 
 #ifdef CONFIG_PROC_SYSCTL
@@ -400,25 +404,6 @@ static int proc_get_long(char **buf, size_t *size,
 
 	if (strtoul_lenient(p, &p, 0, val))
 		return -EINVAL;
-
-	len = *size;
-	if (len > TMPBUFLEN - 1)
-		len = TMPBUFLEN - 1;
-
-	memcpy(tmp, *buf, len);
-
-	tmp[len] = 0;
-	p = tmp;
-	if (*p == '-' && *size > 1) {
-		*neg = true;
-		p++;
-	} else
-		*neg = false;
-	if (!isdigit(*p))
-		return -EINVAL;
-
-	*val = simple_strtoul(p, &p, 0);
-==== BASE ====
 
 	len = p - tmp;
 
