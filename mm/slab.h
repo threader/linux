@@ -390,7 +390,7 @@ extern const struct kmalloc_info_struct {
 void setup_kmalloc_cache_index_table(void);
 void create_kmalloc_caches(void);
 
-extern u8 kmalloc_size_index[24];
+extern u8 kmalloc_size_index[24] __ro_after_init;
 
 static inline unsigned int size_index_elem(unsigned int bytes)
 {
