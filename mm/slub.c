@@ -561,55 +561,6 @@ static inline void set_freepointer(struct kmem_cache *s, void *object, void *fp)
 	*(freeptr_t *)freeptr_addr = freelist_ptr_encode(s, fp, freeptr_addr);
 }
 
-/*
- * See comment in calculate_sizes().
- */
-static inline bool freeptr_outside_object(struct kmem_cache *s)
-{
-	return s->offset >= s->inuse;
-}
-
-/*
- * Return offset of the end of info block which is inuse + free pointer if
- * not overlapping with object.
- */
-static inline unsigned int get_info_end(struct kmem_cache *s)
-{
-	if (freeptr_outside_object(s))
-		return s->inuse + sizeof(void *);
-	else
-		return s->inuse;
-}
-
-#ifdef CONFIG_SLAB_CANARY
-static inline unsigned long *get_canary(struct kmem_cache *s, void *object)
-{
-	if (s->offset)
-		return object + s->offset + sizeof(void *);
-	return object + s->inuse;
-}
-
-static inline unsigned long get_canary_value(const void *canary, unsigned long value)
-{
-	return (value ^ (unsigned long)canary) & CANARY_MASK;
-}
-
-static inline void set_canary(struct kmem_cache *s, void *object, unsigned long value)
-{
-	unsigned long *canary = get_canary(s, object);
-	*canary = get_canary_value(canary, value);
-}
-
-static inline void check_canary(struct kmem_cache *s, void *object, unsigned long value)
-{
-	unsigned long *canary = get_canary(s, object);
-	BUG_ON(*canary != get_canary_value(canary, value));
-}
-#else
-#define set_canary(s, object, value)
-#define check_canary(s, object, value)
-#endif
-
 /* Loop over all objects in a slab */
 #define for_each_object(__p, __s, __addr, __objects) \
 	for (__p = fixup_red_left(__s, __addr); \
@@ -789,51 +740,6 @@ static inline bool slab_update_freelist(struct kmem_cache *s, struct slab *slab,
 	return false;
 }
 
-<<<<<<< HEAD
-/*
- * kmalloc caches has fixed sizes (mostly power of 2), and kmalloc() API
- * family will round up the real request size to these fixed ones, so
- * there could be an extra area than what is requested. Save the original
- * request size in the meta data area, for better debug and sanity check.
- */
-static inline void set_orig_size(struct kmem_cache *s,
-				void *object, unsigned int orig_size)
-{
-	void *p = kasan_reset_tag(object);
-	unsigned int kasan_meta_size;
-
-	if (!slub_debug_orig_size(s))
-		return;
-
-	/*
-	 * KASAN can save its free meta data inside of the object at offset 0.
-	 * If this meta data size is larger than 'orig_size', it will overlap
-	 * the data redzone in [orig_size+1, object_size]. Thus, we adjust
-	 * 'orig_size' to be as at least as big as KASAN's meta data.
-	 */
-	kasan_meta_size = kasan_metadata_size(s, true);
-	if (kasan_meta_size > orig_size)
-		orig_size = kasan_meta_size;
-
-	p += get_info_end(s);
-	p += sizeof(struct track) * 2;
-
-	*(unsigned int *)p = orig_size;
-}
-
-static inline unsigned int get_orig_size(struct kmem_cache *s, void *object)
-{
-	void *p = kasan_reset_tag(object);
-
-	if (!slub_debug_orig_size(s))
-		return s->object_size;
-
-	p += get_info_end(s);
-	p += sizeof(struct track) * 2;
-
-	return *(unsigned int *)p;
-}
-
 #if defined(CONFIG_SLUB_DEBUG) || defined(CONFIG_SLAB_CANARY)
 /*
  * See comment in calculate_sizes().
@@ -882,6 +788,50 @@ static inline void check_canary(struct kmem_cache *s, void *object, unsigned lon
 #define set_canary(s, object, value)
 #define check_canary(s, object, value)
 #endif
+
+/*
+ * kmalloc caches has fixed sizes (mostly power of 2), and kmalloc() API
+ * family will round up the real request size to these fixed ones, so
+ * there could be an extra area than what is requested. Save the original
+ * request size in the meta data area, for better debug and sanity check.
+ */
+static inline void set_orig_size(struct kmem_cache *s,
+				void *object, unsigned int orig_size)
+{
+	void *p = kasan_reset_tag(object);
+	unsigned int kasan_meta_size;
+
+	if (!slub_debug_orig_size(s))
+		return;
+
+	/*
+	 * KASAN can save its free meta data inside of the object at offset 0.
+	 * If this meta data size is larger than 'orig_size', it will overlap
+	 * the data redzone in [orig_size+1, object_size]. Thus, we adjust
+	 * 'orig_size' to be as at least as big as KASAN's meta data.
+	 */
+	kasan_meta_size = kasan_metadata_size(s, true);
+	if (kasan_meta_size > orig_size)
+		orig_size = kasan_meta_size;
+
+	p += get_info_end(s);
+	p += sizeof(struct track) * 2;
+
+	*(unsigned int *)p = orig_size;
+}
+
+static inline unsigned int get_orig_size(struct kmem_cache *s, void *object)
+{
+	void *p = kasan_reset_tag(object);
+
+	if (!slub_debug_orig_size(s))
+		return s->object_size;
+
+	p += get_info_end(s);
+	p += sizeof(struct track) * 2;
+
+	return *(unsigned int *)p;
+}
 
 #ifdef CONFIG_SLUB_DEBUG
 static unsigned long object_map[BITS_TO_LONGS(MAX_OBJS_PER_PAGE)];
@@ -2357,7 +2307,7 @@ struct rcu_delayed_free {
  */
 static __always_inline
 bool slab_free_hook(struct kmem_cache *s, void *x, bool init,
-		    bool after_rcu_delay)
+		    bool after_rcu_delay, bool canary)
 {
 	/* Are the object contents still accessible? */
 	bool still_accessible = (s->flags & SLAB_TYPESAFE_BY_RCU) && !after_rcu_delay;
@@ -2463,12 +2413,23 @@ bool slab_free_freelist_hook(struct kmem_cache *s, void **head, void **tail,
 	bool init;
 
 	if (is_kfence_address(next)) {
-		slab_free_hook(s, next, false, false);
+		slab_free_hook(s, next, false, false, false);
 		return false;
 		// return false; ?
 	}
 
-		if (!slab_free_hook(s, object, slab_want_init_on_free(s), true)) {
+	/* Head and tail of the reconstructed freelist */
+	*head = NULL;
+	*tail = NULL;
+
+	init = slab_want_init_on_free(s);
+
+	do {
+		object = next;
+		next = get_freepointer(s, object);
+
+		/* If object's reuse doesn't have to be delayed */
+		if (likely(slab_free_hook(s, object, init, false, true))) {
 			/* Move object to the new freelist */
 			set_freepointer(s, object, *head);
 			*head = object;
@@ -4714,7 +4675,7 @@ void slab_free(struct kmem_cache *s, struct slab *slab, void *object,
 	memcg_slab_free_hook(s, slab, &object, 1);
 	alloc_tagging_slab_free_hook(s, slab, &object, 1);
 
-	if (likely(slab_free_hook(s, object, slab_want_init_on_free(s), false)))
+	if (likely(slab_free_hook(s, object, slab_want_init_on_free(s), false, true)))
 		do_slab_free(s, slab, object, object, 1, addr);
 }
 
@@ -4723,7 +4684,7 @@ void slab_free(struct kmem_cache *s, struct slab *slab, void *object,
 static noinline
 void memcg_alloc_abort_single(struct kmem_cache *s, void *object)
 {
-	if (likely(slab_free_hook(s, object, slab_want_init_on_free(s), false)))
+	if (likely(slab_free_hook(s, object, slab_want_init_on_free(s), false, true)))
 		do_slab_free(s, virt_to_slab(object), object, object, 1, _RET_IP_);
 }
 #endif
@@ -4912,23 +4873,15 @@ int build_detached_freelist(struct kmem_cache *s, size_t size,
 		df->s = cache_from_obj(s, object); /* Support for memcg */
 	}
 
-<<<<<<< HEAD
-=======
-	if (is_kfence_address(object)) {
-		slab_free_hook(df->s, object, false, false);
-		__kfence_free(object);
-		p[size] = NULL; /* mark object processed */
-		return size;
-	}
-
->>>>>>> 755d18f7837e (slub: add multi-purpose random canaries)
 	/* Start new detached freelist */
 	df->tail = object;
 	df->freelist = object;
 	df->cnt = 1;
 
-	if (is_kfence_address(object))
+	if (is_kfence_address(object)) {
+		slab_free_hook(df->s, object, false, false, false);
 		return size;
+	}
 
 	set_freepointer(df->s, object, NULL);
 
@@ -5004,13 +4957,8 @@ int __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags, size_t size,
 			    void **p)
 {
 	struct kmem_cache_cpu *c;
-<<<<<<< HEAD
 	unsigned long irqflags;
 	int i, k;
-=======
-	int i, k;
-	struct obj_cgroup *objcg = NULL;
->>>>>>> 755d18f7837e (slub: add multi-purpose random canaries)
 
 	/*
 	 * Drain objects in the per cpu slab, while disabling local
@@ -5118,7 +5066,7 @@ error:
 int kmem_cache_alloc_bulk_noprof(struct kmem_cache *s, gfp_t flags, size_t size,
 				 void **p)
 {
-	int i;
+	int i, k;
 
 	if (!size)
 		return 0;
@@ -5355,7 +5303,6 @@ static void early_kmem_cache_node_alloc(int node)
 #ifdef CONFIG_SLUB_DEBUG
 	init_object(kmem_cache_node, n, SLUB_RED_ACTIVE);
 #endif
-<<<<<<< HEAD
        n = kasan_slab_alloc(kmem_cache_node, n, GFP_KERNEL, false);
        slab->freelist = get_freepointer(kmem_cache_node, n);
        slab->inuse = 1;
@@ -5363,14 +5310,6 @@ static void early_kmem_cache_node_alloc(int node)
 
 	set_canary(kmem_cache_node, n, kmem_cache_node->random_active);
 	
-=======
-	set_canary(kmem_cache_node, n, kmem_cache_node->random_active);
-	n = kasan_slab_alloc(kmem_cache_node, n, GFP_KERNEL, false);
-	page->freelist = get_freepointer(kmem_cache_node, n);
-	page->inuse = 1;
-	page->frozen = 0;
-	kmem_cache_node->node[node] = n;
->>>>>>> 755d18f7837e (slub: add multi-purpose random canaries)
 	init_kmem_cache_node(n);
 	inc_slabs_node(kmem_cache_node, node, slab->objects);
 
@@ -5829,7 +5768,6 @@ void __check_heap_object(const void *ptr, unsigned long n,
 
 	if (!is_kfence)
 		check_canary(s, (void *)ptr - offset, s->random_active);
-
 
 	/* Allow address range falling entirely within usercopy region. */
 	if (offset >= s->useroffset &&
@@ -6529,7 +6467,7 @@ enum slab_stat_type {
 #define SO_TOTAL	(1 << SL_TOTAL)
 
 #ifdef CONFIG_MEMCG
-static bool memcg_sysfs_enabled __ro_after_init = IS_ENABLED(CONFIG_SLUB_MEMCG_SYSFS_ON);
+//static bool memcg_sysfs_enabled __ro_after_init = IS_ENABLED(CONFIG_SLUB_MEMCG_SYSFS_ON);
 #endif
 
 static ssize_t show_slab_objects(struct kmem_cache *s,
