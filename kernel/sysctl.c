@@ -109,26 +109,9 @@ static int zero;
 static int __maybe_unused one __read_only = 1;
 static int __maybe_unused two __read_only = 2;
 static int __maybe_unused four __read_only = 4;
-
-static unsigned long __read_only zero_ul;
-static unsigned long __read_only one_ul = 1;
-static unsigned long __read_only long_max = LONG_MAX;
-
-static int one_hundred __read_only = 100;
-static int one_thousand __read_only = 1000;
-#ifdef CONFIG_PRINTK
-static int ten_thousand __read_only = 10000;
-#endif
 #ifdef CONFIG_PERF_EVENTS
 static int six_hundred_forty_kb __read_only = 640 * 1024;
 #endif
-
-/* this is needed for the proc_doulongvec_minmax of vm_dirty_bytes */
-static unsigned long dirty_bytes_min __read_only = 2 * PAGE_SIZE;
-
-/* this is needed for the proc_dointvec_minmax for [fs_]overflow UID and GID */
-static int maxolduid __read_only = 65535;
-static int minolduid __read_only;
 
 static int ngroups_max __read_only = NGROUPS_MAX;
 static const int cap_last_cap = CAP_LAST_CAP;
@@ -1847,18 +1830,7 @@ static struct ctl_table kern_table[] = {
 	{
 		.procname	= "userprocess_debug",
 		.data		= &show_unhandled_signals,
-		.maxlen		= size+#if IS_ENABLED(CONFIG_USB)
-+       {
-+               .procname       = "deny_new_usb",
-+               .data           = &deny_new_usb,
-+               .maxlen         = sizeof(int),
-+               .mode           = 0644,
-+               .proc_handler   = proc_dointvec_minmax_sysadmin,
-+               .extra1         = &zero,
-+               .extra2         = &one,
-+       },
-+#endif
-of(int),
+		.maxlen		= sizeof(int),
 		.mode		= 0644,
 		.proc_handler	= proc_dointvec,
 	},

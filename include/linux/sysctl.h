@@ -29,6 +29,10 @@
 #include <linux/uidgid.h>
 #include <uapi/linux/sysctl.h>
 
+
+extern int proc_dointvec_minmax_sysadmin(const struct ctl_table *table, int write,
+				void *buffer, size_t *lenp, loff_t *ppos);
+
 /* For the /proc/sys support */
 struct completion;
 struct ctl_table;
