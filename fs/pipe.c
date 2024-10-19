@@ -51,7 +51,7 @@
  * The max size that a non-root user is allowed to grow the pipe. Can
  * be set by root in /proc/sys/fs/pipe-max-size
  */
-unsigned int pipe_min_size __read_only = PAGE_SIZE;
+unsigned int pipe_max_size __read_only = PAGE_SIZE;
 
 /* Maximum allocatable pages per user. Hard limit is unset by default, soft
  * matches default values.
@@ -1355,7 +1355,7 @@ static long pipe_set_size(struct pipe_inode_info *pipe, unsigned int arg)
 	 * if the user is currently over a limit.
 	 */
 	if (nr_slots > pipe->max_usage &&
-			size > pipe_min_size && !capable(CAP_SYS_RESOURCE))
+			size > pipe_max_size && !capable(CAP_SYS_RESOURCE))
 		return -EPERM;
 
 	user_bufs = account_pipe_buffers(pipe->user, pipe->nr_accounted, nr_slots);
