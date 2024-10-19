@@ -2439,7 +2439,7 @@ static void *setup_object(struct kmem_cache *s, void *object)
 {
 	setup_object_debug(s, object);
 	object = kasan_init_slab_obj(s, object);
-	if (unlikely(s->ctor)) && !has_sanitize_verify(s)) {
+	if (unlikely(s->ctor) && !has_sanitize_verify(s)) {
 		kasan_unpoison_new_object(s, object);
 		s->ctor(object);
 		kasan_poison_new_object(s, object);
@@ -4573,6 +4573,8 @@ static __always_inline void do_slab_free(struct kmem_cache *s,
 	void *tail_obj = tail ? : head;
 	struct kmem_cache_cpu *c;
 	unsigned long tid;
+	void **freelist;
+	bool sanitize = has_sanitize(s);
 
 	if (IS_ENABLED(CONFIG_SLAB_CANARY) || sanitize) {
 		__maybe_unused int offset = s->offset ? 0 : sizeof(void *);
@@ -4935,6 +4937,7 @@ int __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags, size_t size,
 			    void **p)
 {
 	struct kmem_cache_cpu *c;
+	unsigned long irqflags;
 	int i, k;
 
 	/*
@@ -4991,6 +4994,11 @@ int __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags, size_t size,
 	local_unlock_irqrestore(&s->cpu_slab->lock, irqflags);
 	slub_put_cpu_ptr(s->cpu_slab);
 
+	for (k = 0; k < i; k++) {
+		check_canary(s, p[k], s->random_inactive);
+		set_canary(s, p[k], s->random_active);
+	}
+
 	return i;
 
 error:
@@ -5003,7 +5011,7 @@ error:
 static int __kmem_cache_alloc_bulk(struct kmem_cache *s, gfp_t flags,
 				   size_t size, void **p)
 {
-	int i;
+	int i, k;
 
 	for (i = 0; i < size; i++) {
 		void *object = kfence_alloc(s, s->object_size, flags);
@@ -5084,9 +5092,9 @@ EXPORT_SYMBOL(kmem_cache_alloc_bulk_noprof);
  * take the list_lock.
  */
 static unsigned int slub_min_order __ro_after_init;
-static unsigned int slub_max_order = __ro_after_init; =
+static unsigned int slub_max_order __ro_after_init =
 	IS_ENABLED(CONFIG_SLcUB_TINY) ? 1 : PAGE_ALLOC_COSTLY_ORDER;
-static unsigned int slub_min_objects __ro_after_init;;
+static unsigned int slub_min_objects __ro_after_init;
 
 /*
  * Calculate the order of allocation given an slab object size.
