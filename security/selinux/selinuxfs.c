@@ -645,12 +645,6 @@ static ssize_t sel_write_load(struct file *file, const char __user *buf,
 		goto out;
 	}
 
-	length = resolve_context_types(&load_state, &fsi->state->types);
-	if (length) {
-		selinux_policy_cancel(fsi->state, &load_state);
-		goto out;
-	}
-
 	selinux_policy_commit(&load_state);
 	length = count;
 	audit_log(audit_context(), GFP_KERNEL, AUDIT_MAC_POLICY_LOAD,
