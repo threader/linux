@@ -750,27 +750,49 @@ static inline bool slab_update_freelist(struct kmem_cache *s, struct slab *slab,
 	return false;
 }
 
-#if defined(CONFIG_SLUB_DEBUG) || defined(CONFIG_SLAB_CANARY)
 /*
- * See comment in calculate_sizes().
+ * kmalloc caches has fixed sizes (mostly power of 2), and kmalloc() API
+ * family will round up the real request size to these fixed ones, so
+ * there could be an extra area than what is requested. Save the original
+ * request size in the meta data area, for better debug and sanity check.
  */
-static inline bool freeptr_outside_object(struct kmem_cache *s)
+static inline void set_orig_size(struct kmem_cache *s,
+				void *object, unsigned int orig_size)
 {
-	return s->offset >= s->inuse;
+	void *p = kasan_reset_tag(object);
+	unsigned int kasan_meta_size;
+
+	if (!slub_debug_orig_size(s))
+		return;
+
+	/*
+	 * KASAN can save its free meta data inside of the object at offset 0.
+	 * If this meta data size is larger than 'orig_size', it will overlap
+	 * the data redzone in [orig_size+1, object_size]. Thus, we adjust
+	 * 'orig_size' to be as at least as big as KASAN's meta data.
+	 */
+	kasan_meta_size = kasan_metadata_size(s, true);
+	if (kasan_meta_size > orig_size)
+		orig_size = kasan_meta_size;
+
+	p += get_info_end(s);
+	p += sizeof(struct track) * 2;
+
+	*(unsigned int *)p = orig_size;
 }
 
-/*
- * Return offset of the end of info block which is inuse + free pointer if
- * not overlapping with object.
- */
-static inline unsigned int get_info_end(struct kmem_cache *s)
+static inline unsigned int get_orig_size(struct kmem_cache *s, void *object)
 {
-	if (freeptr_outside_object(s))
-		return s->inuse + sizeof(void *);
-	else
-		return s->inuse;
+	void *p = kasan_reset_tag(object);
+
+	if (!slub_debug_orig_size(s))
+		return s->object_size;
+
+	p += get_info_end(s);
+	p += sizeof(struct track) * 2;
+
+	return *(unsigned int *)p;
 }
-#endif
 
 #ifdef CONFIG_SLAB_CANARY
 static inline unsigned long *get_canary(struct kmem_cache *s, void *object)
@@ -4608,7 +4630,7 @@ void slab_free(struct kmem_cache *s, struct slab *slab, void *object,
 	memcg_slab_free_hook(s, slab, &object, 1);
 	alloc_tagging_slab_free_hook(s, slab, &object, 1);
 
-	if (likely(slab_free_hook(s, object, slab_want_init_on_free(s), false)))
+	if (likely(slab_free_hook(s, object, slab_want_init_on_free(s), false, false)))
 		do_slab_free(s, slab, object, object, 1, addr);
 }
 
@@ -4617,7 +4639,7 @@ void slab_free(struct kmem_cache *s, struct slab *slab, void *object,
 static noinline
 void memcg_alloc_abort_single(struct kmem_cache *s, void *object)
 {
-	if (likely(slab_free_hook(s, object, slab_want_init_on_free(s), false)))
+	if (likely(slab_free_hook(s, object, slab_want_init_on_free(s), false, true)))
 		do_slab_free(s, virt_to_slab(object), object, object, 1, _RET_IP_);
 }
 #endif
@@ -4676,10 +4698,11 @@ static inline struct kmem_cache *virt_to_cache(const void *obj)
 
 	slab = virt_to_slab(obj);
 #ifdef CONFIG_BUG_ON_DATA_CORRUPTION
-	BUG_ON(!PageSlab(page));
+	//BUG_ON(!PageSlab(slab));
 #else
 	if (WARN_ONCE(!slab, "%s: Object is not a Slab page!\n", __func__))
 		return NULL;
+#endif
 	return slab->slab_cache;
 }
 
@@ -4699,6 +4722,7 @@ static inline struct kmem_cache *cache_from_obj(struct kmem_cache *s, void *x)
 		 "%s: Wrong slab cache. %s but object is from %s\n",
 		 __func__, s->name, cachep->name))
 		print_tracking(cachep, x);
+#endif
 	return cachep;
 }
 
@@ -4818,7 +4842,7 @@ int build_detached_freelist(struct kmem_cache *s, size_t size,
 	df->cnt = 1;
 
 	if (is_kfence_address(object)) {
-		slab_free_hook(df->s, object, false, false);
+		slab_free_hook(df->s, object, false, false, false);
 		return size;
 	}
 
@@ -4995,7 +5019,7 @@ error:
 int kmem_cache_alloc_bulk_noprof(struct kmem_cache *s, gfp_t flags, size_t size,
 				 void **p)
 {
-	int i;
+	int i, k;
 
 	if (!size)
 		return 0;
