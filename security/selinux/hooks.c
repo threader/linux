@@ -1791,8 +1791,7 @@ static int inode_has_perm(const struct cred *cred,
 	sid = cred_sid(cred);
 	isec = selinux_inode(inode);
 
-	rc = avc_has_perm(&selinux_state,
-			    sid, isec->sid, isec->sclass, perms, adp);
+	rc = avc_has_perm(sid, isec->sid, isec->sclass, perms, adp);
 
 	if (!rc) {
 		rc = selinux_inode_check_tsec_flags(&selinux_state, cred, isec, perms, adp);
@@ -3237,6 +3236,7 @@ static noinline int audit_inode_permission(struct inode *inode,
 
 static int selinux_inode_permission(struct inode *inode, int mask)
 {
+	const struct cred *cred = current_cred();
 	u32 perms;
 	bool from_access;
 	bool no_block = mask & MAY_NOT_BLOCK;
@@ -6593,7 +6593,7 @@ static int selinux_lsm_setattr(u64 attr, void *value, size_t size)
 		return error;
 
 	/* Obtain a SID for the context, if one was specified. */
-	if (size && str[0] && str[0] != '\n' && strcmp(name, "selinux_flags")) {
+	if (size && str[0] && str[0] != '\n') {
 		if (str[size-1] == '\n') {
 			str[size-1] = 0;
 			size--;
@@ -6684,7 +6684,7 @@ static int selinux_lsm_setattr(u64 attr, void *value, size_t size)
 		}
 
 		tsec->sid = sid;
-	} else if (!strcmp(name, "selinux_flags")) {
+	/* } else if (!strcmp(name, "selinux_flags")) {
 		error = get_type_from_sid(mysid, &context_type);
 		if (error) {
 			goto abort_change;
@@ -6714,7 +6714,7 @@ static int selinux_lsm_setattr(u64 attr, void *value, size_t size)
 			goto abort_change;
 		}
 
-		tsec->flags = flags;
+		tsec->flags = flags; */ 
 	} else {
 		error = -EINVAL;
 		goto abort_change;
