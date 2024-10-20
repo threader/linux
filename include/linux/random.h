@@ -67,9 +67,7 @@ u32 __get_random_u32_below(u32 ceil);
 
 static inline unsigned long get_random_canary(void)
 {
-	unsigned long val = get_random_long();
-
-	return val & CANARY_MASK;
+	return get_random_long() & CANARY_MASK;
 }
 
 /*

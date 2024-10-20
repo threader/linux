@@ -20,11 +20,6 @@
 # define CANARY_MASK 0xffffffffUL
 #endif
 
-static inline unsigned long get_random_canary(void)
-{
-	return get_random_long() & CANARY_MASK;
-}
-
 #if defined(CONFIG_STACKPROTECTOR) || defined(CONFIG_ARM64_PTR_AUTH)
 # include <asm/stackprotector.h>
 #else
