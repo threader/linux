@@ -295,7 +295,7 @@ static int __bprm_mm_init(struct linux_binprm *bprm)
 	mmap_write_unlock(mm);
 	bprm->p = vma->vm_end - sizeof(void *);
 	if (!(current->personality & ADDR_NO_RANDOMIZE) && randomize_va_space)
-		bprm->p ^= get_random_int() & ~PAGE_MASK;
+		bprm->p ^= get_random_u32() & ~PAGE_MASK;
 	return 0;
 err:
 	ksm_exit(mm);
