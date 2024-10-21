@@ -90,15 +90,11 @@ EXPORT_SYMBOL_GPL(sysctl_long_vals);
 
 #if defined(CONFIG_SYSCTL)
 
-<<<<<<< HEAD
-/* Constants used for minimum and maximum */
-=======
 /* External variables not in a header file. */
 #if IS_ENABLED(CONFIG_USB)
 int deny_new_usb __read_mostly = 0;
 EXPORT_SYMBOL(deny_new_usb);
 #endif
->>>>>>> d4a29a89320a (add toggle for disabling newly added USB devices)
 
 #ifdef CONFIG_PERF_EVENTS
 static const int six_hundred_forty_kb = 640 * 1024;
