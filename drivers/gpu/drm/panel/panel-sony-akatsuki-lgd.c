@@ -165,6 +165,7 @@ static int sony_akatsuki_lgd_disable(struct drm_panel *panel)
 	struct sony_akatsuki_lgd *ctx = to_sony_akatsuki_lgd(panel);
 	struct mipi_dsi_device *dsi = ctx->dsi;
 	struct device *dev = &dsi->dev;
+	struct mipi_dsi_multi_context dsi_ctx = { .dsi = dsi };
 	int ret;
 
 	ret = mipi_dsi_dcs_set_display_off(dsi);
@@ -178,8 +179,8 @@ static int sony_akatsuki_lgd_disable(struct drm_panel *panel)
 	 * TODO: These two DCS commands are unbalanced wrt prepare() (they should be in
 	 * unprepare()), but at that point the "bridge" DSI host is already disabled.
 	 */
-	ret = mipi_dsi_dcs_set_tear_off(dsi);
-	if (ret < 0) {
+	mipi_dsi_dcs_set_tear_off_multi(&dsi_ctx);
+	if (dsi_ctx.accum_err < 0) {
 		dev_err(dev, "Failed to set tear off: %d\n", ret);
 		return ret;
 	}
