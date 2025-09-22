@@ -272,6 +272,15 @@ DEFINE_IDTENTRY_SYSVEC(sysvec_call_function_single)
 	trace_call_function_single_exit(CALL_FUNCTION_SINGLE_VECTOR);
 }
 
+void generic_multikernel_interrupt(void);
+
+DEFINE_IDTENTRY_SYSVEC(sysvec_multikernel)
+{
+	apic_eoi();
+	inc_irq_stat(irq_call_count);
+	generic_multikernel_interrupt();
+}
+
 static int __init nonmi_ipi_setup(char *str)
 {
 	smp_no_nmi_ipi = true;
@@ -279,6 +288,11 @@ static int __init nonmi_ipi_setup(char *str)
 }
 
 __setup("nonmi_ipi", nonmi_ipi_setup);
+
+static int native_cpu_physical_id(int cpu)
+{
+	return cpu_physical_id(cpu);
+}
 
 struct smp_ops smp_ops = {
 	.smp_prepare_boot_cpu	= native_smp_prepare_boot_cpu,
@@ -297,6 +311,7 @@ struct smp_ops smp_ops = {
 
 	.send_call_func_ipi	= native_send_call_func_ipi,
 	.send_call_func_single_ipi = native_send_call_func_single_ipi,
+	.cpu_physical_id	= native_cpu_physical_id,
 };
 EXPORT_SYMBOL_GPL(smp_ops);
 

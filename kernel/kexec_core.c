@@ -13,6 +13,8 @@
 #include <linux/slab.h>
 #include <linux/fs.h>
 #include <linux/kexec.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 #include <linux/mutex.h>
 #include <linux/list.h>
 #include <linux/highmem.h>
@@ -41,6 +43,7 @@
 #include <linux/objtool.h>
 #include <linux/kmsg_dump.h>
 #include <linux/dma-map-ops.h>
+#include <linux/memblock.h>
 
 #include <asm/page.h>
 #include <asm/sections.h>
@@ -54,6 +57,10 @@ atomic_t __kexec_lock = ATOMIC_INIT(0);
 bool kexec_in_progress = false;
 
 bool kexec_file_dbg_print;
+
+/* Linked list of dynamically allocated kimages */
+static LIST_HEAD(kexec_image_list);
+static DEFINE_MUTEX(kexec_image_mutex);
 
 /*
  * When kexec transitions to the new kernel there is a one-to-one
@@ -211,6 +218,32 @@ int sanity_check_segment_list(struct kimage *image)
 	}
 #endif
 
+#if 0
+	if (image->type == KEXEC_TYPE_MULTIKERNEL) {
+		for (i = 0; i < nr_segments; i++) {
+			unsigned long mstart, mend;
+			phys_addr_t start, end;
+			bool in_reserved_region = false;
+			u64 i;
+
+			mstart = image->segment[i].mem;
+			mend = mstart + image->segment[i].memsz - 1;
+			for_each_reserved_mem_range(i, &start, &end) {
+				if (mstart >= start && mend <= end) {
+					in_reserved_region = true;
+					break;
+				}
+			}
+
+			if (!in_reserved_region) {
+				pr_err("Segment 0x%lx-0x%lx is not in a reserved memory region\n",
+					mstart, mend);
+				return -EADDRNOTAVAIL;
+			}
+		}
+	}
+#endif
+
 	/*
 	 * The destination addresses are searched from system RAM rather than
 	 * being allocated from the buddy allocator, so they are not guaranteed
@@ -247,6 +280,9 @@ struct kimage *do_kimage_alloc_init(void)
 
 	/* Initialize the list of unusable pages */
 	INIT_LIST_HEAD(&image->unusable_pages);
+
+	/* Initialize the list node for multikernel support */
+	INIT_LIST_HEAD(&image->list);
 
 #ifdef CONFIG_CRASH_HOTPLUG
 	image->hp_action = KEXEC_CRASH_HP_NONE;
@@ -579,6 +615,13 @@ void kimage_free(struct kimage *image)
 
 	if (!image)
 		return;
+
+	/* Remove from linked list and update compatibility pointers */
+	kimage_remove_from_list(image);
+	if (image == kexec_image)
+		kimage_update_compat_pointers(NULL, KEXEC_TYPE_DEFAULT);
+	else if (image == kexec_crash_image)
+		kimage_update_compat_pointers(NULL, KEXEC_TYPE_CRASH);
 
 #ifdef CONFIG_CRASH_DUMP
 	if (image->vmcoreinfo_data_copy) {
@@ -943,6 +986,84 @@ out:
 }
 #endif
 
+static int kimage_load_multikernel_segment(struct kimage *image, int idx)
+{
+	/* For multikernel we simply copy the data from
+	 * user space to it's destination.
+	 * We do things a page at a time for the sake of kmap.
+	 */
+	struct kexec_segment *segment = &image->segment[idx];
+	unsigned long maddr;
+	size_t ubytes, mbytes;
+	int result;
+	unsigned char __user *buf = NULL;
+	unsigned char *kbuf = NULL;
+
+	result = 0;
+	if (image->file_mode)
+		kbuf = segment->kbuf;
+	else
+		buf = segment->buf;
+	ubytes = segment->bufsz;
+	mbytes = segment->memsz;
+	maddr = segment->mem;
+	pr_info("Loading multikernel segment: mem=0x%lx, memsz=0x%zu, buf=0x%px, bufsz=0x%zu\n",
+		maddr, mbytes, buf, ubytes);
+	while (mbytes) {
+		char *ptr;
+		size_t uchunk, mchunk;
+		unsigned long page_addr = maddr & PAGE_MASK;
+		unsigned long page_offset = maddr & ~PAGE_MASK;
+
+		/* Use memremap to map the physical address */
+		ptr = memremap(page_addr, PAGE_SIZE, MEMREMAP_WB);
+		if (!ptr) {
+			pr_err("Failed to memremap memory at 0x%lx\n", page_addr);
+			result = -ENOMEM;
+			goto out;
+		}
+
+		/* Adjust pointer to the offset within the page */
+		ptr += page_offset;
+
+		/* Calculate chunk sizes */
+		mchunk = min_t(size_t, mbytes, PAGE_SIZE - page_offset);
+		uchunk = min(ubytes, mchunk);
+
+		/* Zero the trailing part of the page if needed */
+		if (mchunk > uchunk) {
+			/* Zero the trailing part of the page */
+			memset(ptr + uchunk, 0, mchunk - uchunk);
+		}
+
+		if (uchunk) {
+			/* For file based kexec, source pages are in kernel memory */
+			if (image->file_mode)
+				memcpy(ptr, kbuf, uchunk);
+			else
+				result = copy_from_user(ptr, buf, uchunk);
+			ubytes -= uchunk;
+			if (image->file_mode)
+				kbuf += uchunk;
+			else
+				buf += uchunk;
+		}
+
+		/* Clean up */
+		memunmap(ptr - page_offset);
+		if (result) {
+			result = -EFAULT;
+			goto out;
+		}
+		maddr  += mchunk;
+		mbytes -= mchunk;
+
+		cond_resched();
+	}
+out:
+	return result;
+}
+
 int kimage_load_segment(struct kimage *image, int idx)
 {
 	int result = -ENOMEM;
@@ -956,6 +1077,9 @@ int kimage_load_segment(struct kimage *image, int idx)
 		result = kimage_load_crash_segment(image, idx);
 		break;
 #endif
+	case KEXEC_TYPE_MULTIKERNEL:
+		result = kimage_load_multikernel_segment(image, idx);
+		break;
 	}
 
 	return result;
@@ -1015,6 +1139,72 @@ void kimage_unmap_segment(void *segment_buffer)
 	vunmap(segment_buffer);
 }
 
+void kimage_add_to_list(struct kimage *image)
+{
+	mutex_lock(&kexec_image_mutex);
+	list_add_tail(&image->list, &kexec_image_list);
+	mutex_unlock(&kexec_image_mutex);
+}
+
+void kimage_remove_from_list(struct kimage *image)
+{
+	mutex_lock(&kexec_image_mutex);
+	if (!list_empty(&image->list))
+		list_del_init(&image->list);
+	mutex_unlock(&kexec_image_mutex);
+}
+
+struct kimage *kimage_find_by_type(int type)
+{
+	struct kimage *image;
+
+	mutex_lock(&kexec_image_mutex);
+	list_for_each_entry(image, &kexec_image_list, list) {
+		if (image->type == type) {
+			mutex_unlock(&kexec_image_mutex);
+			return image;
+		}
+	}
+	mutex_unlock(&kexec_image_mutex);
+	return NULL;
+}
+
+void kimage_update_compat_pointers(struct kimage *new_image, int type)
+{
+	mutex_lock(&kexec_image_mutex);
+	if (type == KEXEC_TYPE_CRASH) {
+		kexec_crash_image = new_image;
+	} else if (type == KEXEC_TYPE_DEFAULT) {
+		kexec_image = new_image;
+	}
+	mutex_unlock(&kexec_image_mutex);
+}
+
+int kimage_get_all_by_type(int type, struct kimage **images, int max_count)
+{
+	struct kimage *image;
+	int count = 0;
+
+	mutex_lock(&kexec_image_mutex);
+	list_for_each_entry(image, &kexec_image_list, list) {
+		if (image->type == type && count < max_count) {
+			images[count++] = image;
+		}
+	}
+	mutex_unlock(&kexec_image_mutex);
+	return count;
+}
+
+void kimage_list_lock(void)
+{
+	mutex_lock(&kexec_image_mutex);
+}
+
+void kimage_list_unlock(void)
+{
+	mutex_unlock(&kexec_image_mutex);
+}
+
 struct kexec_load_limit {
 	/* Mutex protects the limit count. */
 	struct mutex mutex;
@@ -1031,9 +1221,56 @@ static struct kexec_load_limit load_limit_panic = {
 	.limit = -1,
 };
 
+/* Compatibility: maintain pointers to current default and crash images */
 struct kimage *kexec_image;
 struct kimage *kexec_crash_image;
 static int kexec_load_disabled;
+
+/*
+ * Proc interface for /proc/multikernel
+ */
+static int multikernel_proc_show(struct seq_file *m, void *v)
+{
+	struct kimage *image;
+	const char *type_names[] = {
+		[KEXEC_TYPE_DEFAULT] = "default",
+		[KEXEC_TYPE_CRASH] = "crash",
+		[KEXEC_TYPE_MULTIKERNEL] = "multikernel"
+	};
+
+	seq_printf(m, "Type        Start Address   Segments\n");
+	seq_printf(m, "----------  --------------  --------\n");
+
+	kimage_list_lock();
+	if (list_empty(&kexec_image_list)) {
+		seq_printf(m, "No kimages loaded\n");
+	} else {
+		list_for_each_entry(image, &kexec_image_list, list) {
+			const char *type_name = "unknown";
+
+			if (image->type < ARRAY_SIZE(type_names) && type_names[image->type])
+				type_name = type_names[image->type];
+
+			seq_printf(m, "%-10s  0x%012lx  %8lu\n",
+				   type_name, image->start, image->nr_segments);
+		}
+	}
+	kimage_list_unlock();
+
+	return 0;
+}
+
+static int multikernel_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, multikernel_proc_show, NULL);
+}
+
+static const struct proc_ops multikernel_proc_ops = {
+	.proc_open	= multikernel_proc_open,
+	.proc_read	= seq_read,
+	.proc_lseek	= seq_lseek,
+	.proc_release	= single_release,
+};
 
 #ifdef CONFIG_SYSCTL
 static int kexec_limit_handler(const struct ctl_table *table, int write,
@@ -1105,6 +1342,21 @@ static int __init kexec_core_sysctl_init(void)
 }
 late_initcall(kexec_core_sysctl_init);
 #endif
+
+static int __init multikernel_proc_init(void)
+{
+	struct proc_dir_entry *entry;
+
+	entry = proc_create("multikernel", 0444, NULL, &multikernel_proc_ops);
+	if (!entry) {
+		pr_err("Failed to create /proc/multikernel\n");
+		return -ENOMEM;
+	}
+
+	pr_debug("Created /proc/multikernel interface\n");
+	return 0;
+}
+late_initcall(multikernel_proc_init);
 
 bool kexec_load_permitted(int kexec_image_type)
 {
@@ -1229,4 +1481,111 @@ int kernel_kexec(void)
  Unlock:
 	kexec_unlock();
 	return error;
+}
+
+/*
+ * Find a multikernel image by entry point
+ */
+struct kimage *kimage_find_multikernel_by_entry(unsigned long entry)
+{
+	struct kimage *image;
+
+	kimage_list_lock();
+	list_for_each_entry(image, &kexec_image_list, list) {
+		if (image->type == KEXEC_TYPE_MULTIKERNEL && image->start == entry) {
+			kimage_list_unlock();
+			return image;
+		}
+	}
+	kimage_list_unlock();
+	return NULL;
+}
+
+/*
+ * Get multikernel image by index (0-based)
+ */
+struct kimage *kimage_get_multikernel_by_index(int index)
+{
+	struct kimage *image;
+	int count = 0;
+
+	kimage_list_lock();
+	list_for_each_entry(image, &kexec_image_list, list) {
+		if (image->type == KEXEC_TYPE_MULTIKERNEL) {
+			if (count == index) {
+				kimage_list_unlock();
+				return image;
+			}
+			count++;
+		}
+	}
+	kimage_list_unlock();
+	return NULL;
+}
+
+int multikernel_kexec(int cpu)
+{
+	struct kimage *mk_image;
+	int rc;
+
+	pr_info("multikernel kexec: cpu %d\n", cpu);
+
+	if (cpu_online(cpu)) {
+		pr_err("The CPU is currently running with this kernel instance.");
+		return -EBUSY;
+	}
+
+	if (!kexec_trylock())
+		return -EBUSY;
+
+	mk_image = kimage_find_by_type(KEXEC_TYPE_MULTIKERNEL);
+	if (!mk_image) {
+		pr_err("No multikernel image loaded\n");
+		rc = -EINVAL;
+		goto unlock;
+	}
+
+	pr_info("Found multikernel image with entry point: 0x%lx\n", mk_image->start);
+
+	cpus_read_lock();
+	rc = multikernel_kick_ap(cpu, mk_image->start);
+	cpus_read_unlock();
+
+unlock:
+	kexec_unlock();
+	return rc;
+}
+
+int multikernel_kexec_by_entry(int cpu, unsigned long entry)
+{
+	struct kimage *mk_image;
+	int rc;
+
+	pr_info("multikernel kexec: cpu %d, entry 0x%lx\n", cpu, entry);
+
+	if (cpu_online(cpu)) {
+		pr_err("The CPU is currently running with this kernel instance.");
+		return -EBUSY;
+	}
+
+	if (!kexec_trylock())
+		return -EBUSY;
+
+	/* Find the specific multikernel image by entry point */
+	mk_image = kimage_find_multikernel_by_entry(entry);
+	if (!mk_image) {
+		pr_err("No multikernel image found with entry point 0x%lx\n", entry);
+		rc = -EINVAL;
+		goto unlock;
+	}
+
+	pr_info("Using multikernel image with entry point: 0x%lx\n", mk_image->start);
+
+	cpus_read_lock();
+	rc = multikernel_kick_ap(cpu, mk_image->start);
+	cpus_read_unlock();
+
+unlock:
+	kexec_unlock();
+	return rc;
 }

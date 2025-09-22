@@ -16,6 +16,7 @@
 #include <linux/syscalls.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
+#include <linux/memblock.h>
 
 #include "kexec_internal.h"
 
@@ -27,6 +28,7 @@ static int kimage_alloc_init(struct kimage **rimage, unsigned long entry,
 	int ret;
 	struct kimage *image;
 	bool kexec_on_panic = flags & KEXEC_ON_CRASH;
+	bool multikernel_load = flags & KEXEC_MULTIKERNEL;
 
 #ifdef CONFIG_CRASH_DUMP
 	if (kexec_on_panic) {
@@ -34,6 +36,30 @@ static int kimage_alloc_init(struct kimage **rimage, unsigned long entry,
 		if ((entry < phys_to_boot_phys(crashk_res.start)) ||
 		    (entry > phys_to_boot_phys(crashk_res.end)))
 			return -EADDRNOTAVAIL;
+	}
+#endif
+
+#if 0
+	if (multikernel_load) {
+		// Check if entry is in a reserved memory region
+		bool in_reserved_region = false;
+		phys_addr_t start, end;
+		u64 i;
+
+		for_each_reserved_mem_range(i, &start, &end) {
+			if (entry >= start && entry < end) {
+				in_reserved_region = true;
+				break;
+			}
+		}
+
+		if (!in_reserved_region) {
+			pr_err("Entry point 0x%lx is not in a reserved memory region\n", entry);
+			return -EADDRNOTAVAIL; // Return an error if not in a reserved region
+		}
+
+		pr_info("multikernel load: got to multikernel_load syscall, entry 0x%lx, nr_segments %lu, flags 0x%lx\n",
+			entry, nr_segments, flags);
 	}
 #endif
 
@@ -54,10 +80,16 @@ static int kimage_alloc_init(struct kimage **rimage, unsigned long entry,
 	}
 #endif
 
+	if (multikernel_load) {
+		image->type = KEXEC_TYPE_MULTIKERNEL;
+	}
+
 	ret = sanity_check_segment_list(image);
 	if (ret)
 		goto out_free_image;
 
+	if (multikernel_load)
+		goto done;
 	/*
 	 * Find a location for the control code buffer, and add it
 	 * the vector of segments so that it's pages will also be
@@ -79,6 +111,7 @@ static int kimage_alloc_init(struct kimage **rimage, unsigned long entry,
 		}
 	}
 
+done:
 	*rimage = image;
 	return 0;
 out_free_control_pages:
@@ -114,7 +147,31 @@ static int do_kexec_load(unsigned long entry, unsigned long nr_segments,
 
 	if (nr_segments == 0) {
 		/* Uninstall image */
-		kimage_free(xchg(dest_image, NULL));
+		if (flags & KEXEC_ON_CRASH) {
+			struct kimage *old_image = xchg(&kexec_crash_image, NULL);
+			if (old_image) {
+				kimage_remove_from_list(old_image);
+				kimage_free(old_image);
+			}
+		} else if (flags & KEXEC_MULTIKERNEL) {
+			/* For multikernel unload, we need to specify which image to remove */
+			/* For now, remove all multikernel images - this could be enhanced */
+			struct kimage *images[10];
+			int count, i;
+
+			count = kimage_get_all_by_type(KEXEC_TYPE_MULTIKERNEL, images, 10);
+			for (i = 0; i < count; i++) {
+				kimage_remove_from_list(images[i]);
+				kimage_free(images[i]);
+			}
+			pr_info("Unloaded %d multikernel images\n", count);
+		} else {
+			struct kimage *old_image = xchg(&kexec_image, NULL);
+			if (old_image) {
+				kimage_remove_from_list(old_image);
+				kimage_free(old_image);
+			}
+		}
 		ret = 0;
 		goto out_unlock;
 	}
@@ -124,7 +181,11 @@ static int do_kexec_load(unsigned long entry, unsigned long nr_segments,
 		 * crashes.  Free any current crash dump kernel before
 		 * we corrupt it.
 		 */
-		kimage_free(xchg(&kexec_crash_image, NULL));
+		struct kimage *old_crash_image = xchg(&kexec_crash_image, NULL);
+		if (old_crash_image) {
+			kimage_remove_from_list(old_crash_image);
+			kimage_free(old_crash_image);
+		}
 	}
 
 	ret = kimage_alloc_init(&image, entry, nr_segments, segments, flags);
@@ -139,9 +200,11 @@ static int do_kexec_load(unsigned long entry, unsigned long nr_segments,
 		image->hotplug_support = 1;
 #endif
 
-	ret = machine_kexec_prepare(image);
-	if (ret)
-		goto out;
+	if (!(flags & KEXEC_MULTIKERNEL)) {
+		ret = machine_kexec_prepare(image);
+		if (ret)
+			goto out;
+	}
 
 	/*
 	 * Some architecture(like S390) may touch the crash memory before
@@ -164,7 +227,35 @@ static int do_kexec_load(unsigned long entry, unsigned long nr_segments,
 		goto out;
 
 	/* Install the new kernel and uninstall the old */
-	image = xchg(dest_image, image);
+	if (flags & KEXEC_ON_CRASH) {
+		struct kimage *old_image = xchg(&kexec_crash_image, image);
+		if (old_image) {
+			kimage_remove_from_list(old_image);
+			kimage_free(old_image);
+		}
+		if (image) {
+			kimage_add_to_list(image);
+			kimage_update_compat_pointers(image, KEXEC_TYPE_CRASH);
+		}
+		image = NULL; /* Don't free the new image */
+	} else if (flags & KEXEC_MULTIKERNEL) {
+		if (image) {
+			kimage_add_to_list(image);
+			pr_info("Added multikernel image to list (entry: 0x%lx)\n", image->start);
+		}
+		image = NULL; /* Don't free the new image */
+	} else {
+		struct kimage *old_image = xchg(&kexec_image, image);
+		if (old_image) {
+			kimage_remove_from_list(old_image);
+			kimage_free(old_image);
+		}
+		if (image) {
+			kimage_add_to_list(image);
+			kimage_update_compat_pointers(image, KEXEC_TYPE_DEFAULT);
+		}
+		image = NULL; /* Don't free the new image */
+	}
 
 out:
 #ifdef CONFIG_CRASH_DUMP
