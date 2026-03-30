@@ -8,6 +8,8 @@ linux (7.2~rc3-1~exp1) UNRELEASED; urgency=medium
     FTBFS on hppa)
   * uio_hv_generic: Bind to FCopy device by default
   * hyperv-daemons: Build using upstream Makefile
+  * [x86] hyperv-daemons: Install hv_fcopy_uio_daemon and servce
+    (Closes: #1132305)
 
   [ Bastian Blank ]
   * Header tests don't require the binary anymore.

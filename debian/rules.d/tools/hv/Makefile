@@ -8,7 +8,6 @@ all:
 install:
 	$(MAKE_UPSTREAM) install
 	rm -f $(DESTDIR)/usr/libexec/hypervkvpd/hv_set_ifconfig \
-		$(DESTDIR)/usr/sbin/hv_fcopy_uio_daemon \
 		$(DESTDIR)/usr/sbin/lsvmbus
 
 endif
