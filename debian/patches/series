@@ -71,6 +71,7 @@ bugfix/all/disable-some-marvell-phys.patch
 bugfix/all/fs-add-module_softdep-declarations-for-hard-coded-cr.patch
 
 # Miscellaneous features
+features/all/uio_hv_generic-bind-to-fcopy-device-by-default.patch
 
 # Lockdown missing pieces
 features/all/lockdown/efi-add-an-efi_secure_boot-flag-to-indicate-secure-b.patch
