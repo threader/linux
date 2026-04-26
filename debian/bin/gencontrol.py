@@ -280,7 +280,6 @@ class Gencontrol(Base):
         if t := config.build.compiler_gnutype_compat:
             makeflags['COMPAT_GNU_TYPE'] = t
         makeflags['IMAGE_FILE'] = config.build.kernel_file
-        makeflags['IMAGE_INSTALL_STEM'] = config.build.kernel_stem
 
         makeflags['LOCALVERSION'] = vars['localversion']
         makeflags['LOCALVERSION_IMAGE'] = vars['localversion-image']
