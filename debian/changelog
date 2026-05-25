@@ -11,6 +11,7 @@ linux (7.2~rc3-1~exp1) UNRELEASED; urgency=medium
   * Header tests don't require the binary anymore.
   * Generate tests/control from all templates.
   * Move linux-*-generic provides into templates.
+  * Rename signed template to match source package.
 
   [ Salvatore Bonaccorso ]
   * fs/ntfs: Enable NTFS_FS as module
