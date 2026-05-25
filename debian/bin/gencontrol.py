@@ -219,10 +219,12 @@ class Gencontrol(Base):
             vars['signedtemplate_binaryversion'] = '@signedtemplate_binaryversion@'
             vars['signedtemplate_sourceversion'] = '@signedtemplate_sourceversion@'
 
-            self.bundle.add('signed-template', (arch,), makeflags, vars, arch=arch)
-
             bundle_signed = self.bundles[f'signed-{arch}'] = \
                 PackagesBundle(f'signed-{arch}', 'signed.source.control', vars, self.templates)
+
+            vars['signedtemplate_source'] = bundle_signed.source.name
+
+            self.bundle.add('signed-template', (arch,), makeflags, vars, arch=arch)
 
             with bundle_signed.open('source/lintian-overrides', 'w') as f:
                 f.write(self.substitute(
