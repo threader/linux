@@ -49,8 +49,6 @@ CONFIG_SUNVDC=m
 CONFIG_PRINTER=m
 # CONFIG_LP_CONSOLE is not set
 # CONFIG_PPDEV is not set
-# CONFIG_DTLK is not set
-# CONFIG_APPLICOM is not set
 
 ##
 ## file: drivers/char/hw_random/Kconfig

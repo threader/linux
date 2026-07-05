@@ -98,9 +98,6 @@ CONFIG_BT_HCIUART_BCSP=y
 CONFIG_BT_HCIBCM203X=m
 CONFIG_BT_HCIBPA10X=m
 CONFIG_BT_HCIBFUSB=m
-CONFIG_BT_HCIDTL1=m
-CONFIG_BT_HCIBT3C=m
-CONFIG_BT_HCIBLUECARD=m
 CONFIG_BT_HCIVHCI=m
 
 ##
@@ -109,8 +106,6 @@ CONFIG_BT_HCIVHCI=m
 CONFIG_PRINTER=m
 # CONFIG_LP_CONSOLE is not set
 CONFIG_PPDEV=m
-CONFIG_DTLK=m
-CONFIG_APPLICOM=m
 
 ##
 ## file: drivers/char/agp/Kconfig
@@ -396,13 +391,8 @@ CONFIG_ARCNET_1201=m
 CONFIG_ARCNET_1051=m
 CONFIG_ARCNET_RAW=m
 CONFIG_ARCNET_CAP=m
-CONFIG_ARCNET_COM90xx=m
-CONFIG_ARCNET_COM90xxIO=m
-CONFIG_ARCNET_RIM_I=m
 CONFIG_ARCNET_COM20020=m
-CONFIG_ARCNET_COM20020_ISA=m
 CONFIG_ARCNET_COM20020_PCI=m
-CONFIG_ARCNET_COM20020_CS=m
 
 ##
 ## file: drivers/net/ethernet/3com/Kconfig
@@ -432,11 +422,6 @@ CONFIG_AMD8111_ETH=m
 ## file: drivers/net/ethernet/broadcom/Kconfig
 ##
 CONFIG_B44=m
-
-##
-## file: drivers/net/ethernet/cirrus/Kconfig
-##
-CONFIG_CS89x0_ISA=m
 
 ##
 ## file: drivers/net/ethernet/dec/tulip/Kconfig
@@ -662,7 +647,6 @@ CONFIG_LCD_CLASS_DEVICE=m
 ## file: drivers/video/console/Kconfig
 ##
 CONFIG_VGA_CONSOLE=y
-CONFIG_MDA_CONSOLE=m
 
 ##
 ## file: drivers/video/fbdev/Kconfig
