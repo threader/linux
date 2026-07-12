@@ -19,7 +19,7 @@ from debian_linux.config_v2 import (
     ConfigMergedFeatureset,
     ConfigMergedFlavour,
 )
-from debian_linux.dataclasses_deb822 import read_deb822, write_deb822
+from debian_linux.dataclasses_deb822 import read_deb822
 from debian_linux.debian import \
     PackageBuildprofile, \
     PackageRelation, PackageRelationEntry, PackageRelationGroup, \
@@ -94,9 +94,6 @@ class Gencontrol(Base):
         })
         makeflags['SOURCE_BASENAME'] = vars['source_basename']
         makeflags['SOURCE_SUFFIX'] = vars['source_suffix']
-
-        # Prepare to generate debian/tests/control
-        self.tests_control = list(self.templates.get_tests_control('main.tests-control', vars))
 
     def do_main_makefile(
         self,
@@ -483,23 +480,6 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
             for package in packages_own:
                 package.build_profiles[0].neg.add('pkg.linux.quick')
 
-        tests_control_image = list(
-            self.templates.get_tests_control('binary.tests-control', vars))
-        for c in tests_control_image:
-            c.depends.extend(
-                [i.name for i in packages_binary_unsigned]
-            )
-
-        tests_control_headers = list(
-            self.templates.get_tests_control('headers.tests-control', vars))
-        for c in tests_control_headers:
-            c.depends.extend(
-                [i.name for i in packages_headers]
-            )
-
-        self.tests_control.extend(tests_control_image)
-        self.tests_control.extend(tests_control_headers)
-
         kconfig = []
         for c in (config.config_nodefault if config.defs_flavour.is_test else config.config):
             for d in self.config_dirs:
@@ -601,7 +581,6 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
 
     def write(self) -> None:
         super().write()
-        self.write_tests_control()
         self.write_signed()
 
     def write_signed(self) -> None:
@@ -635,10 +614,6 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
                     json.dump({'packages': pkg_sign_entries_notquick}, f, indent=2)
                 with bundle.path('files.quick.json').open('w') as f:
                     json.dump({'packages': pkg_sign_entries_quick}, f, indent=2)
-
-    def write_tests_control(self) -> None:
-        with open("debian/tests/control", 'w') as f:
-            write_deb822(self.tests_control, f)
 
 
 if __name__ == '__main__':
