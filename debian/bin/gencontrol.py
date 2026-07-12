@@ -430,24 +430,8 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
 
         if do_meta:
             packages_own.extend(bundle_signed.add('base.meta', ruleid, makeflags, vars, arch=arch))
-
-            packages_meta = (
-                bundle_signed.add('image.meta', ruleid, makeflags, vars, arch=arch)
-            )
-            assert len(packages_meta) == 1
-            packages_meta += (
-                bundle_signed.add('headers.meta', ruleid, makeflags, vars, arch=arch)
-            )
-            assert len(packages_meta) == 2
-
-            if (
-                config.defs_flavour.is_default
-                and not self.vars['source_suffix']
-            ):
-                packages_meta[0].provides.append('linux-image-generic')
-                packages_meta[1].provides.append('linux-headers-generic')
-
-            packages_own.extend(packages_meta)
+            packages_own.extend(bundle_signed.add('image.meta', ruleid, makeflags, vars, arch=arch))
+            packages_own.extend(bundle_signed.add('headers.meta', ruleid, makeflags, vars, arch=arch))
 
         packages_own.extend(
             self.bundle.add('image-dbg', ruleid, makeflags, vars, arch=arch)

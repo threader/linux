@@ -10,6 +10,7 @@ linux (7.2~rc2-1~exp1) UNRELEASED; urgency=medium
   [ Bastian Blank ]
   * Header tests don't require the binary anymore.
   * Generate tests/control from all templates.
+  * Move linux-*-generic provides into templates.
 
  -- Bastian Blank <waldi@debian.org>  Sat, 04 Jul 2026 18:45:03 +0200
 
