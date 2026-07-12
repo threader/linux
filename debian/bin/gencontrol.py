@@ -494,8 +494,7 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
             self.templates.get_tests_control('headers.tests-control', vars))
         for c in tests_control_headers:
             c.depends.extend(
-                [i.name for i in packages_headers] +
-                [i.name for i in packages_binary_unsigned]
+                [i.name for i in packages_headers]
             )
 
         self.tests_control.extend(tests_control_image)
