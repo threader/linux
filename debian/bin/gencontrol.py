@@ -291,11 +291,6 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
         arch = config.name_debianarch
         ruleid = (arch, config.name_featureset, config.name_flavour)
 
-        packages_headers = (
-            self.bundle.add('headers', ruleid, makeflags, vars, arch=arch)
-        )
-        assert len(packages_headers) == 1
-
         do_meta = config.packages.meta
 
         relation_c_compiler = PackageRelationEntry(cast(str, config.build.c_compiler))
@@ -375,25 +370,24 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
         packages_own.extend(self.bundle.add('modules', ruleid, makeflags, vars, arch=arch))
 
         if build_signed:
-            packages_binary_unsigned = (
+            packages_own.extend(
                 self.bundle.add(
                     'binary', ruleid, makeflags, vars | {'build_unsigned': True}, arch=arch)
             )
-            packages_binary = packages_binary_unsigned[:]
-            packages_binary.extend(
+            packages_own.extend(
                 bundle_signed.add(
                     'signed.binary', ruleid, makeflags, vars | {'build_unsigned': False}, arch=arch)
             )
 
         else:
-            packages_binary = packages_binary_unsigned = (
+            packages_own.extend(
                 bundle_signed.add(
                     'binary', ruleid, makeflags, vars | {'build_unsigned': False}, arch=arch)
             )
 
-        packages_image = (
+        packages_own.extend(packages_image := (
             bundle_signed.add('image', ruleid, makeflags, vars, arch=arch)
-        )
+        ))
 
         for field in ('Depends', 'Provides', 'Suggests', 'Recommends',
                       'Conflicts', 'Breaks'):
@@ -423,23 +417,23 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
                     desc.append(config.description.long[part])
                     desc.append_short(config.description.short[part])
 
-        packages_headers[0].depends.merge([relation_c_compiler_host])
-        packages_own.extend(packages_binary)
-        packages_own.extend(packages_image)
-        packages_own.extend(packages_headers)
-
-        if do_meta:
-            packages_own.extend(bundle_signed.add('base.meta', ruleid, makeflags, vars, arch=arch))
-            packages_own.extend(bundle_signed.add('image.meta', ruleid, makeflags, vars, arch=arch))
-            packages_own.extend(bundle_signed.add('headers.meta', ruleid, makeflags, vars, arch=arch))
+        packages_own.extend(packages_headers := (
+            self.bundle.add('headers', ruleid, makeflags, vars, arch=arch)
+        ))
+        for p in packages_headers:
+            p.depends.merge([relation_c_compiler_host])
 
         packages_own.extend(
             self.bundle.add('image-dbg', ruleid, makeflags, vars, arch=arch)
         )
+
         if do_meta:
+            packages_own.extend(bundle_signed.add('base.meta', ruleid, makeflags, vars, arch=arch))
+            packages_own.extend(bundle_signed.add('image.meta', ruleid, makeflags, vars, arch=arch))
             packages_own.extend(
-                bundle_signed.add('image-dbg.meta', ruleid, makeflags, vars, arch=arch)
-            )
+                bundle_signed.add('headers.meta', ruleid, makeflags, vars, arch=arch))
+            packages_own.extend(
+                bundle_signed.add('image-dbg.meta', ruleid, makeflags, vars, arch=arch))
 
         if (
             config.defs_flavour.is_default
