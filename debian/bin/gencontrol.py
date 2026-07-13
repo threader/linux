@@ -19,7 +19,7 @@ from debian_linux.config_v2 import (
     ConfigMergedFeatureset,
     ConfigMergedFlavour,
 )
-from debian_linux.dataclasses_deb822 import read_deb822, write_deb822
+from debian_linux.dataclasses_deb822 import read_deb822
 from debian_linux.debian import \
     PackageBuildprofile, \
     PackageRelation, PackageRelationEntry, PackageRelationGroup, \
@@ -94,9 +94,6 @@ class Gencontrol(Base):
         })
         makeflags['SOURCE_BASENAME'] = vars['source_basename']
         makeflags['SOURCE_SUFFIX'] = vars['source_suffix']
-
-        # Prepare to generate debian/tests/control
-        self.tests_control = list(self.templates.get_tests_control('main.tests-control', vars))
 
     def do_main_makefile(
         self,
@@ -294,11 +291,6 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
         arch = config.name_debianarch
         ruleid = (arch, config.name_featureset, config.name_flavour)
 
-        packages_headers = (
-            self.bundle.add('headers', ruleid, makeflags, vars, arch=arch)
-        )
-        assert len(packages_headers) == 1
-
         do_meta = config.packages.meta
 
         relation_c_compiler = PackageRelationEntry(cast(str, config.build.c_compiler))
@@ -378,25 +370,24 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
         packages_own.extend(self.bundle.add('modules', ruleid, makeflags, vars, arch=arch))
 
         if build_signed:
-            packages_binary_unsigned = (
+            packages_own.extend(
                 self.bundle.add(
                     'binary', ruleid, makeflags, vars | {'build_unsigned': True}, arch=arch)
             )
-            packages_binary = packages_binary_unsigned[:]
-            packages_binary.extend(
+            packages_own.extend(
                 bundle_signed.add(
                     'signed.binary', ruleid, makeflags, vars | {'build_unsigned': False}, arch=arch)
             )
 
         else:
-            packages_binary = packages_binary_unsigned = (
+            packages_own.extend(
                 bundle_signed.add(
                     'binary', ruleid, makeflags, vars | {'build_unsigned': False}, arch=arch)
             )
 
-        packages_image = (
+        packages_own.extend(packages_image := (
             bundle_signed.add('image', ruleid, makeflags, vars, arch=arch)
-        )
+        ))
 
         for field in ('Depends', 'Provides', 'Suggests', 'Recommends',
                       'Conflicts', 'Breaks'):
@@ -426,39 +417,23 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
                     desc.append(config.description.long[part])
                     desc.append_short(config.description.short[part])
 
-        packages_headers[0].depends.merge([relation_c_compiler_host])
-        packages_own.extend(packages_binary)
-        packages_own.extend(packages_image)
-        packages_own.extend(packages_headers)
-
-        if do_meta:
-            packages_own.extend(bundle_signed.add('base.meta', ruleid, makeflags, vars, arch=arch))
-
-            packages_meta = (
-                bundle_signed.add('image.meta', ruleid, makeflags, vars, arch=arch)
-            )
-            assert len(packages_meta) == 1
-            packages_meta += (
-                bundle_signed.add('headers.meta', ruleid, makeflags, vars, arch=arch)
-            )
-            assert len(packages_meta) == 2
-
-            if (
-                config.defs_flavour.is_default
-                and not self.vars['source_suffix']
-            ):
-                packages_meta[0].provides.append('linux-image-generic')
-                packages_meta[1].provides.append('linux-headers-generic')
-
-            packages_own.extend(packages_meta)
+        packages_own.extend(packages_headers := (
+            self.bundle.add('headers', ruleid, makeflags, vars, arch=arch)
+        ))
+        for p in packages_headers:
+            p.depends.merge([relation_c_compiler_host])
 
         packages_own.extend(
             self.bundle.add('image-dbg', ruleid, makeflags, vars, arch=arch)
         )
+
         if do_meta:
+            packages_own.extend(bundle_signed.add('base.meta', ruleid, makeflags, vars, arch=arch))
+            packages_own.extend(bundle_signed.add('image.meta', ruleid, makeflags, vars, arch=arch))
             packages_own.extend(
-                bundle_signed.add('image-dbg.meta', ruleid, makeflags, vars, arch=arch)
-            )
+                bundle_signed.add('headers.meta', ruleid, makeflags, vars, arch=arch))
+            packages_own.extend(
+                bundle_signed.add('image-dbg.meta', ruleid, makeflags, vars, arch=arch))
 
         if (
             config.defs_flavour.is_default
@@ -482,24 +457,6 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
         else:
             for package in packages_own:
                 package.build_profiles[0].neg.add('pkg.linux.quick')
-
-        tests_control_image = list(
-            self.templates.get_tests_control('binary.tests-control', vars))
-        for c in tests_control_image:
-            c.depends.extend(
-                [i.name for i in packages_binary_unsigned]
-            )
-
-        tests_control_headers = list(
-            self.templates.get_tests_control('headers.tests-control', vars))
-        for c in tests_control_headers:
-            c.depends.extend(
-                [i.name for i in packages_headers] +
-                [i.name for i in packages_binary_unsigned]
-            )
-
-        self.tests_control.extend(tests_control_image)
-        self.tests_control.extend(tests_control_headers)
 
         kconfig = []
         for c in (config.config_nodefault if config.defs_flavour.is_test else config.config):
@@ -602,7 +559,6 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
 
     def write(self) -> None:
         super().write()
-        self.write_tests_control()
         self.write_signed()
 
     def write_signed(self) -> None:
@@ -636,10 +592,6 @@ linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={ur
                     json.dump({'packages': pkg_sign_entries_notquick}, f, indent=2)
                 with bundle.path('files.quick.json').open('w') as f:
                     json.dump({'packages': pkg_sign_entries_quick}, f, indent=2)
-
-    def write_tests_control(self) -> None:
-        with open("debian/tests/control", 'w') as f:
-            write_deb822(self.tests_control, f)
 
 
 if __name__ == '__main__':
