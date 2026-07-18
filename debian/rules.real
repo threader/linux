@@ -683,6 +683,13 @@ binary_hyperv-daemons: build_hyperv-daemons
 		dh_installinit --name hv-$$service-daemon \
 			|| break; \
 	done
+ifneq ($(filter amd64 i386 x32,$(DEB_HOST_ARCH)),)
+	dh_installsystemd --name hv-fcopy-uio-daemon
+	dh_installinit --name hv-fcopy-uio-daemon
+	echo >> debian/hyperv-daemons.substvars 'hyperv-daemons:Arch-Description='\
+'hv_fcopy_uio_daemon provides the file copy service, allowing the host$${Newline}'\
+'to copy files into the guest.'
+endif
 	$(dh_binary_post)
 
 build_rtla: $(STAMPS_DIR)/prepare-build-tools $(STAMPS_DIR)/build-cpupower
