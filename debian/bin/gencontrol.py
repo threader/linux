@@ -219,20 +219,23 @@ class Gencontrol(Base):
             vars['signedtemplate_binaryversion'] = '@signedtemplate_binaryversion@'
             vars['signedtemplate_sourceversion'] = '@signedtemplate_sourceversion@'
 
-            self.bundle.add('signed-template', (arch,), makeflags, vars, arch=arch)
-
             bundle_signed = self.bundles[f'signed-{arch}'] = \
                 PackagesBundle(f'signed-{arch}', 'signed.source.control', vars, self.templates)
+
+            vars['signedtemplate_source'] = bundle_signed.source.name
+
+            self.bundle.add('signed-template', (arch,), makeflags, vars, arch=arch)
 
             with bundle_signed.open('source/lintian-overrides', 'w') as f:
                 f.write(self.substitute(
                     self.templates.get('signed.source.lintian-overrides'), vars))
 
             with bundle_signed.open('changelog.head', 'w') as f:
+                name = bundle_signed.source.name
                 dist = self.changelog[0].distribution
                 urgency = self.changelog[0].urgency
                 f.write(f'''\
-linux-signed-{vars['arch']} (@signedtemplate_sourceversion@) {dist}; urgency={urgency}
+{name} (@signedtemplate_sourceversion@) {dist}; urgency={urgency}
 
   * Sign kernel from {self.changelog[0].source} @signedtemplate_binaryversion@
 ''')
