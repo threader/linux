@@ -136,6 +136,11 @@ CONFIG_GPIO_PCA953X=m
 CONFIG_DRM=m
 
 ##
+## file: drivers/gpu/drm/ast/Kconfig
+##
+CONFIG_DRM_AST=m
+
+##
 ## file: drivers/gpu/drm/bridge/Kconfig
 ##
 CONFIG_DRM_DISPLAY_CONNECTOR=m
