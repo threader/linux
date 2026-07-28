@@ -686,6 +686,7 @@ CONFIG_GPIO_PCIE_IDIO_24=m
 CONFIG_GPIO_VIPERBOARD=m
 CONFIG_GPIO_MPSSE=m
 # CONFIG_GPIO_MOCKUP is not set
+CONFIG_GPIO_SIM=m
 
 ##
 ## file: drivers/gpu/drm/Kconfig
