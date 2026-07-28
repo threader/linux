@@ -12,6 +12,9 @@ linux (7.2~rc5-1~exp1) UNRELEASED; urgency=medium
   [ Aurelien Jarno ]
   * [riscv64] Enable RISCV_USER_CFI
 
+  [ Han Gao ]
+  * [riscv64] Enable CONFIG_DRM_AST as module (Closes: #1142767)
+
  -- Ben Hutchings <benh@debian.org>  Fri, 24 Jul 2026 12:32:14 +0200
 
 linux (7.2~rc3-1~exp1) experimental; urgency=medium
