@@ -1,4 +1,4 @@
-linux (7.2~rc5-1~exp1) UNRELEASED; urgency=medium
+linux (7.2~rc5-1~exp1) experimental; urgency=medium
 
   * New upstream release candidate.
 
@@ -21,7 +21,7 @@ linux (7.2~rc5-1~exp1) UNRELEASED; urgency=medium
   [ John Paul Adrian Glaubitz ]
   * [sh4] Disable wireless support to reduce kernel size (Closes: #1141885)
 
- -- Ben Hutchings <benh@debian.org>  Fri, 24 Jul 2026 12:32:14 +0200
+ -- Salvatore Bonaccorso <carnil@debian.org>  Tue, 28 Jul 2026 06:55:11 +0200
 
 linux (7.2~rc3-1~exp1) experimental; urgency=medium
 
