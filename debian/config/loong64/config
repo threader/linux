@@ -119,6 +119,11 @@ CONFIG_SERIO_SERPORT=m
 CONFIG_SERIO_RAW=m
 
 ##
+## file: drivers/mmc/host/Kconfig
+##
+CONFIG_MMC_LOONGSON2=m
+
+##
 ## file: drivers/mtd/chips/Kconfig
 ##
 CONFIG_MTD_CFI=m
