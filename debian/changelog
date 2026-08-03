@@ -6,6 +6,9 @@ linux (7.2~rc6-1~exp1) UNRELEASED; urgency=medium
   * [loong64] drivers/mmc/host: Enable MMC_LOONGSON2 as module
     (Closes: #1142793)
 
+  [ Uwe Kleine-König ]
+  * [arm64] Enable NVMEM_QNAP_MCU_EEPROM as a module for QNAP's TSx33
+
  -- Salvatore Bonaccorso <carnil@debian.org>  Wed, 29 Jul 2026 17:33:10 +0200
 
 linux (7.2~rc5-1~exp1) experimental; urgency=medium
