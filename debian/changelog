@@ -5,6 +5,8 @@ linux (7.2~rc6-1~exp1) UNRELEASED; urgency=medium
   [ Salvatore Bonaccorso ]
   * [loong64] drivers/mmc/host: Enable MMC_LOONGSON2 as module
     (Closes: #1142793)
+  * drivers/mmc/host: Enable MMC_ALCOR as module (Closes: #1142912)
+  * drivers/misc/cardreader: Enable MISC_ALCOR_PCI as module (Closes: #1142912)
 
  -- Salvatore Bonaccorso <carnil@debian.org>  Wed, 29 Jul 2026 17:33:10 +0200
 
