@@ -7,6 +7,7 @@ linux (7.2~rc7-1~exp1) UNRELEASED; urgency=medium
     (Closes: #1142793)
   * drivers/mmc/host: Enable MMC_ALCOR as module (Closes: #1142912)
   * drivers/misc/cardreader: Enable MISC_ALCOR_PCI as module (Closes: #1142912)
+  * fs/erofs: Enable EROFS_FS_PAGE_CACHE_SHARE (Closes: #1141656)
 
   [ Bastian Blank ]
   * Move stuff in linux-libc-dev-*-cross to use gnu type, not multiarch.
