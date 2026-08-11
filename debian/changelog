@@ -8,6 +8,10 @@ linux (7.2~rc7-1~exp1) UNRELEASED; urgency=medium
   * drivers/mmc/host: Enable MMC_ALCOR as module (Closes: #1142912)
   * drivers/misc/cardreader: Enable MISC_ALCOR_PCI as module (Closes: #1142912)
 
+  [ Bastian Blank ]
+  * Move stuff in linux-libc-dev-*-cross to use gnu type, not multiarch.
+    (closes: #1144100)
+
  -- Salvatore Bonaccorso <carnil@debian.org>  Wed, 29 Jul 2026 17:33:10 +0200
 
 linux (7.2~rc5-1~exp1) experimental; urgency=medium
