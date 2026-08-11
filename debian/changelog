@@ -13,6 +13,9 @@ linux (7.2~rc7-1~exp1) UNRELEASED; urgency=medium
   * Move stuff in linux-libc-dev-*-cross to use gnu type, not multiarch.
     (closes: #1144100)
 
+  [ Uwe Kleine-König ]
+  * [arm64] Enable NVMEM_QNAP_MCU_EEPROM as a module for QNAP's TSx33
+
  -- Salvatore Bonaccorso <carnil@debian.org>  Wed, 29 Jul 2026 17:33:10 +0200
 
 linux (7.2~rc5-1~exp1) experimental; urgency=medium
