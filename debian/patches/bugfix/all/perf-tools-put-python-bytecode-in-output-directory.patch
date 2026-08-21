@@ -16,9 +16,11 @@ Signed-off-by: Ben Hutchings <benh@debian.org>
  tools/perf/Makefile.perf | 5 +++++
  1 file changed, 5 insertions(+)
 
---- a/tools/perf/Makefile.perf
-+++ b/tools/perf/Makefile.perf
-@@ -399,6 +399,11 @@
+Index: linux-master/tools/perf/Makefile.perf
+===================================================================
+--- linux-master.orig/tools/perf/Makefile.perf	2026-08-21 15:58:47.665267270 +0200
++++ linux-master/tools/perf/Makefile.perf	2026-08-21 15:58:47.662407558 +0200
+@@ -397,6 +397,11 @@ PYTHON_EXTBUILD_LIB := $(PYTHON_EXTBUILD
  PYTHON_EXTBUILD_TMP := $(PYTHON_EXTBUILD)tmp/
  export PYTHON_EXTBUILD_LIB PYTHON_EXTBUILD_TMP
  
