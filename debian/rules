@@ -119,9 +119,9 @@ maintainerclean: clean-generated
 	rm -rf $(filter-out debian .git, $(wildcard * .[^.]*))
 
 clean: debian/control
-	dh_testdir
-	rm -rf $(CLEAN_PATTERNS)
-	dh_clean
+#	dh_testdir
+#	rm -rf $(CLEAN_PATTERNS)
+#	dh_clean
 
 CONTROL_FILES = $(BUILD_DIR)/version-info $(wildcard debian/templates/*.in)
 CONTROL_FILES += debian/config/defines.toml $(wildcard debian/config/*/defines.toml)
