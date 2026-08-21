@@ -2,9 +2,11 @@ From: Ben Hutchings <benh@debian.org>
 Date: Mon, 11 May 2015 02:51:07 +0000
 Subject: linux-tools: Install perf-read-vdso{,x}32 in directory under /usr/lib
 
---- a/tools/perf/Makefile.perf
-+++ b/tools/perf/Makefile.perf
-@@ -943,21 +943,21 @@ install-tools: all install-gtk
+Index: linux-master/tools/perf/Makefile.perf
+===================================================================
+--- linux-master.orig/tools/perf/Makefile.perf	2026-08-21 14:59:57.187276368 +0200
++++ linux-master/tools/perf/Makefile.perf	2026-08-21 15:02:23.000000000 +0200
+@@ -827,21 +827,21 @@
  		$(LN) '$(DESTDIR_SQ)$(bindir_SQ)/perf' '$(DESTDIR_SQ)$(bindir_SQ)/trace'; \
  		$(INSTALL) -d -m 755 '$(DESTDIR_SQ)$(includedir_SQ)/perf'; \
  		$(INSTALL) -m 644 include/perf/perf_dlfilter.h -t '$(DESTDIR_SQ)$(includedir_SQ)/perf'

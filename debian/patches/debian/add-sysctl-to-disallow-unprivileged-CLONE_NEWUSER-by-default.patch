@@ -58,9 +58,9 @@ Signed-off-by: Serge Hallyn <serge.hallyn@ubuntu.com>
  	err = check_unshare_flags(unshare_flags);
  	if (err)
  		goto bad_unshare_out;
---- a/kernel/sysctl.c
-+++ b/kernel/sysctl.c
-@@ -77,6 +77,10 @@ EXPORT_SYMBOL_GPL(sysctl_long_vals);
+--- a/kernel/sysctl.c	2026-08-21 15:28:24.540225855 +0200
++++ b/kernel/sysctl.c.mod	2026-08-21 15:27:45.935251746 +0200
+@@ -35,6 +35,10 @@
  static const int ngroups_max = NGROUPS_MAX;
  static const int cap_last_cap = CAP_LAST_CAP;
  
@@ -68,10 +68,10 @@ Signed-off-by: Serge Hallyn <serge.hallyn@ubuntu.com>
 +extern int unprivileged_userns_clone;
 +#endif
 +
- #ifdef CONFIG_PROC_SYSCTL
+ #ifdef CONFIG_SYSCTL
  
  /**
-@@ -1581,6 +1585,15 @@ int proc_do_static_key(const struct ctl_
+@@ -1398,6 +1402,15 @@
  }
  
  static const struct ctl_table sysctl_subsys_table[] = {
@@ -84,9 +84,10 @@ Signed-off-by: Serge Hallyn <serge.hallyn@ubuntu.com>
 +		.proc_handler	= proc_dointvec,
 +	},
 +#endif
- #ifdef CONFIG_PROC_SYSCTL
+ #ifdef CONFIG_SYSCTL
  	{
  		.procname	= "sysctl_writes_strict",
+
 --- a/kernel/user_namespace.c
 +++ b/kernel/user_namespace.c
 @@ -23,6 +23,9 @@

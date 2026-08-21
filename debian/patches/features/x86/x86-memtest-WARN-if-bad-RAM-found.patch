@@ -13,9 +13,11 @@ Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
  mm/memtest.c |    2 ++
  1 files changed, 2 insertions(+), 0 deletions(-)
 
---- a/mm/memtest.c
-+++ b/mm/memtest.c
-@@ -26,6 +26,10 @@ static u64 patterns[] __initdata = {
+Index: linux-master/mm/memtest.c
+===================================================================
+--- linux-master.orig/mm/memtest.c	2026-08-21 15:49:52.412423460 +0200
++++ linux-master/mm/memtest.c	2026-08-21 15:49:52.408571231 +0200
+@@ -31,6 +31,10 @@ static u64 patterns[] __initdata = {
  
  static void __init reserve_bad_mem(u64 pattern, phys_addr_t start_bad, phys_addr_t end_bad)
  {

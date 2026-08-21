@@ -8,10 +8,12 @@ Forwarded: not-needed
  tools/perf/Makefile.perf | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
---- a/tools/perf/Makefile.perf
-+++ b/tools/perf/Makefile.perf
-@@ -897,7 +897,7 @@
- install: install-bin try-install-man
+Index: linux-master/tools/perf/Makefile.perf
+===================================================================
+--- linux-master.orig/tools/perf/Makefile.perf	2026-08-21 15:19:58.891258637 +0200
++++ linux-master/tools/perf/Makefile.perf	2026-08-21 15:19:58.890421721 +0200
+@@ -908,7 +908,7 @@ install-build-deps:
+ 	$(Q)$(SHELL) $(srctree)/tools/perf/scripts/install-build-deps.sh $(INSTALL_BUILD_DEPS_ARGS)
  
  install-python_ext:
 -	$(PYTHON_WORD) util/setup.py $(python_setup_quiet) install --root='/$(DESTDIR_SQ)'
