@@ -6354,12 +6354,12 @@ CONFIG_MODULE_FORCE_UNLOAD=y
 # CONFIG_MODULE_SRCVERSION_ALL is not set
 CONFIG_MODULE_SIG=y
 #. Signature validation is a run-time option
-CONFIG_MODULE_SIG_FORCE=y
+# CONFIG_MODULE_SIG_FORCE is not set
 CONFIG_MODULE_SIG_ALL=y
 ## choice: Hash algorithm to sign modules
-# CONFIG_MODULE_SIG_SHA256 is not set
+CONFIG_MODULE_SIG_SHA256=y
 # CONFIG_MODULE_SIG_SHA384 is not set
-CONFIG_MODULE_SIG_SHA512=y
+# CONFIG_MODULE_SIG_SHA512 is not set
 ## end choice
 CONFIG_MODULE_COMPRESS=y
 ## choice: Module compression type
