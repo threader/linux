@@ -26,8 +26,8 @@ Signed-off-by: Salvatore Bonaccorso <carnil@debian.org>
 
 Index: linux-master/arch/x86/kernel/setup.c
 ===================================================================
---- linux-master.orig/arch/x86/kernel/setup.c	2026-08-21 15:58:30.263224534 +0200
-+++ linux-master/arch/x86/kernel/setup.c	2026-08-21 15:58:30.260158587 +0200
+--- linux-master.orig/arch/x86/kernel/setup.c	2026-08-23 13:54:15.363088475 +0200
++++ linux-master/arch/x86/kernel/setup.c	2026-08-23 13:54:15.355668763 +0200
 @@ -1007,6 +1007,8 @@ void __init setup_arch(char **cmdline_p)
  	if (efi_enabled(EFI_BOOT))
  		efi_init();
@@ -37,19 +37,10 @@ Index: linux-master/arch/x86/kernel/setup.c
  	reserve_ibft_region();
  	x86_init.resources.dmi_setup();
  
-@@ -1168,8 +1170,6 @@ void __init setup_arch(char **cmdline_p)
- 	/* Allocate bigger log buffer */
- 	setup_log_buf(1);
- 
--	efi_set_secure_boot(boot_params.secure_boot);
--
- 	reserve_initrd();
- 
- 	acpi_table_upgrade();
 Index: linux-master/include/linux/security.h
 ===================================================================
---- linux-master.orig/include/linux/security.h	2026-08-21 15:58:30.263224534 +0200
-+++ linux-master/include/linux/security.h	2026-08-21 15:58:30.261453139 +0200
+--- linux-master.orig/include/linux/security.h	2026-08-23 13:54:15.363088475 +0200
++++ linux-master/include/linux/security.h	2026-08-23 13:54:15.361667945 +0200
 @@ -582,6 +582,7 @@ int security_inode_notifysecctx(struct i
  int security_inode_setsecctx(struct dentry *dentry, void *ctx, u32 ctxlen);
  int security_inode_getsecctx(struct inode *inode, struct lsm_context *cp);
@@ -72,8 +63,8 @@ Index: linux-master/include/linux/security.h
  				    u64 id, u64 flags)
 Index: linux-master/security/lockdown/Kconfig
 ===================================================================
---- linux-master.orig/security/lockdown/Kconfig	2026-08-21 15:58:30.263224534 +0200
-+++ linux-master/security/lockdown/Kconfig	2026-08-21 15:58:30.262278973 +0200
+--- linux-master.orig/security/lockdown/Kconfig	2026-08-23 13:54:15.363088475 +0200
++++ linux-master/security/lockdown/Kconfig	2026-08-23 13:54:15.362535437 +0200
 @@ -45,3 +45,18 @@ config LOCK_DOWN_KERNEL_FORCE_CONFIDENTI
  	 disabled.
  
@@ -95,8 +86,8 @@ Index: linux-master/security/lockdown/Kconfig
 +	  triggered in integrity mode if EFI Secure Boot is set.
 Index: linux-master/security/lockdown/lockdown.c
 ===================================================================
---- linux-master.orig/security/lockdown/lockdown.c	2026-08-21 15:58:30.263224534 +0200
-+++ linux-master/security/lockdown/lockdown.c	2026-08-21 15:58:30.262626177 +0200
+--- linux-master.orig/security/lockdown/lockdown.c	2026-08-23 13:54:15.363088475 +0200
++++ linux-master/security/lockdown/lockdown.c	2026-08-23 13:54:15.363069886 +0200
 @@ -24,7 +24,7 @@ static const enum lockdown_reason lockdo
  /*
   * Put the kernel into lock-down mode.

@@ -31,7 +31,7 @@ ifeq ($(DEBUG),0)
 endif
 
 ifeq ($(DEBUG),0)
-  CFLAGS += -D_FORTIFY_SOURCE
+  CFLAGS += -D_FORTIFY_SOURCE=2
 endif
 
 # Treat warnings as errors unless directed not to

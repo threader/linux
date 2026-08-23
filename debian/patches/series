@@ -68,12 +68,12 @@ features/x86/x86-memtest-WARN-if-bad-RAM-found.patch
 
 # Miscellaneous bug fixes
 bugfix/all/disable-some-marvell-phys.patch
-bugfix/all/fs-add-module_softdep-declarations-for-hard-coded-cr.patch
+# bugfix/all/fs-add-module_softdep-declarations-for-hard-coded-cr.patch
 
 # Miscellaneous features
 
 # Lockdown missing pieces
-features/all/lockdown/efi-add-an-efi_secure_boot-flag-to-indicate-secure-b.patch
+# features/all/lockdown/efi-add-an-efi_secure_boot-flag-to-indicate-secure-b.patch
 features/all/lockdown/efi-lock-down-the-kernel-if-booted-in-secure-boot-mo.patch
 features/all/lockdown/mtd-disable-slram-and-phram-when-locked-down.patch
 features/all/lockdown/arm64-add-kernel-config-option-to-lock-down-when.patch
@@ -93,7 +93,7 @@ bugfix/all/tools-perf-remove-shebangs.patch
 bugfix/all/tools-build-remove-bpf-run-time-check-at-build-time.patch
 bugfix/all/cpupower-fix-checks-for-cpu-existence.patch
 bugfix/all/libapi-define-_fortify_source-as-2-not-empty.patch
-bugfix/all/tools-perf-fix-missing-ldflags-for-some-programs.patch
+# bugfix/all/tools-perf-fix-missing-ldflags-for-some-programs.patch
 bugfix/all/tools_lib_symbol_use_d_fortify_source_2_for_non_debug_builds.patch
 bugfix/all/perf-tools-support-extra-cxxflags.patch
 bugfix/all/perf-tools-pass-extra_cflags-through-to-libbpf-build-again.patch

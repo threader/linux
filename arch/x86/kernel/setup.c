@@ -1007,6 +1007,8 @@ void __init setup_arch(char **cmdline_p)
 	if (efi_enabled(EFI_BOOT))
 		efi_init();
 
+	efi_set_secure_boot(boot_params.secure_boot);
+
 	reserve_ibft_region();
 	x86_init.resources.dmi_setup();
 

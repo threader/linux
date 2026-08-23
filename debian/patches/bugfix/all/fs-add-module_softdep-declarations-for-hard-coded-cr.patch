@@ -16,27 +16,3 @@ Signed-off-by: Ben Hutchings <ben@decadent.org.uk>
  fs/nfsd/nfsctl.c  | 3 +++
  4 files changed, 6 insertions(+), 2 deletions(-)
 
-Index: linux-master/fs/jbd2/journal.c
-===================================================================
---- linux-master.orig/fs/jbd2/journal.c	2026-08-21 15:53:48.675228689 +0200
-+++ linux-master/fs/jbd2/journal.c	2026-08-21 15:53:48.674496815 +0200
-@@ -3062,5 +3062,6 @@ static void __exit journal_exit(void)
- 
- MODULE_DESCRIPTION("Generic filesystem journal-writing module");
- MODULE_LICENSE("GPL");
-+MODULE_SOFTDEP("pre: crypto-crc32c");
- module_init(journal_init);
- module_exit(journal_exit);
-Index: linux-master/fs/nfsd/nfsctl.c
-===================================================================
---- linux-master.orig/fs/nfsd/nfsctl.c	2026-08-21 15:53:48.675228689 +0200
-+++ linux-master/fs/nfsd/nfsctl.c	2026-08-21 15:53:48.675002680 +0200
-@@ -2938,5 +2938,8 @@ static void __exit exit_nfsd(void)
- MODULE_AUTHOR("Olaf Kirch <okir@monad.swb.de>");
- MODULE_DESCRIPTION("In-kernel NFS server");
- MODULE_LICENSE("GPL");
-+#ifdef CONFIG_NFSD_V4
-+MODULE_SOFTDEP("pre: crypto-md5");
-+#endif
- module_init(init_nfsd)
- module_exit(exit_nfsd)
